@@ -1,0 +1,10 @@
+# Este archivo lo copia scripts/deploy-pwa.ps1 al repo publico como
+# .gitattributes. No lo edites alla: se sobreescribe en cada publicacion.
+#
+# El repo de la PWA es un DESTINO DE PUBLICACION: los bytes que sirve GitHub
+# Pages tienen que ser exactamente los que copia el script, sin que git
+# normalice finales de linea por el camino. Si git convirtiera LF a CRLF en
+# vendor/, los sha256 de VENDOR.sha256 dejarian de cuadrar en cualquier clon
+# nuevo y la verificacion de integridad se volveria ruido que todo el mundo
+# aprende a ignorar.
+* -text
