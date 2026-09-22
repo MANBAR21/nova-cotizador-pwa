@@ -449,6 +449,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
       <select id="vzGrupo" onchange="cargarVisualizador()">
         <option value="visualizador">Próximos y sin fecha</option>
         <option value="finalizados">Finalizados</option>
+        <option value="ocultas">Ocultas</option>
       </select></div>
     <div style="display:flex;align-items:end">
       <button type="button" class="save-btn" style="width:100%" onclick="cargarVisualizador(true)">↻ Actualizar</button>
@@ -2520,13 +2521,39 @@ function vzPintar(filas,desdeCache,fechaCache){
         vzFmtFecha(r.fecha_evento)+(cuando?' · '+cuando:'')+' · '+(VZ_ESTADO[r.estado]||r.estado)+
       '</div>'+
       (r.incluye_precios===false?'<div style="font-size:9.5px;color:#aaa;margin-top:2px">Sin permiso para ver montos</div>':'')+
+      '<div style="text-align:right;margin-top:5px">'+
+        '<a href="#" class="vzQuitar" data-id="'+r.id+'" data-oculto="'+(r.oculto?1:0)+'" '+
+          'data-cliente="'+(r.cliente||'').replace(/"/g,'&quot;')+'" '+
+          'style="font-size:10px;color:'+(r.oculto?'#2E9AB3':'#c0392b')+';text-decoration:none">'+
+          (r.oculto?'↩ Devolver al visualizador':'✕ Quitar del visualizador')+'</a>'+
+      '</div>'+
     '</div>';
   }).join('');
+
+  cont.querySelectorAll('.vzQuitar').forEach(a=>{
+    a.onclick=async ev=>{
+      ev.preventDefault();
+      const id=+a.dataset.id, ocultar=a.dataset.oculto!=='1';
+      if(ocultar&&!confirm('Quitar "'+a.dataset.cliente+'" del visualizador?\n\n'+
+        'No se borra: queda guardada y la puedes devolver desde el listado "Ocultas".'))return;
+      a.textContent='...';
+      try{
+        const sb=getSb();
+        const{error}=await sb.rpc('ocultar_cotizacion',{p_id:id,p_oculto:ocultar});
+        if(error)throw error;
+        await cargarVisualizador(true);
+      }catch(e){
+        alert('No se pudo: '+(e&&e.message||e));
+        await cargarVisualizador(true);
+      }
+    };
+  });
 }
 
 async function cargarVisualizador(forzar){
   const est=$('vzEstado'), cont=$('vzLista');
-  const vista=$('vzGrupo').value==='finalizados'?'v_eventos_finalizados':'v_visualizador_eventos';
+  const vista={finalizados:'v_eventos_finalizados',ocultas:'v_eventos_ocultos'}[$('vzGrupo').value]
+              ||'v_visualizador_eventos';
 
   if(!identidadCacheada()){
     est.textContent='';
