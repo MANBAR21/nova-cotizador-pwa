@@ -19,7 +19,14 @@ h1{font-size:18px;font-weight:700;color:#2E9AB3;margin-bottom:3px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 label{font-size:10px;color:#555;display:block;margin-bottom:2px}
-input,select{width:100%;font-size:11px;padding:6px 8px;border:0.5px solid #ccc;border-radius:4px;background:white;color:#1a1a1a;font-family:Arial}
+input,select{width:100%;font-size:11px;padding:6px 8px;border:0.5px solid #ccc;border-radius:4px;background:white;color:#1a1a1a;font-family:Arial;min-width:0}
+/* Un hijo de grid trae min-width:auto y NO puede encogerse por debajo del ancho
+   intrinseco de su contenido. En iOS Safari input[type=date] tiene un ancho
+   intrinseco grande (el mm/dd/yyyy nativo mas el icono), asi que la columna 1fr
+   se negaba a encoger y la casilla se salia de la tarjeta. En Chromium de
+   escritorio no pasaba porque alli el input es mas angosto. */
+.g2>*,.g3>*,.sg>*,.add-row>*,.cmp-row>*,.ft2>*{min-width:0}
+input[type="date"]{-webkit-appearance:none;appearance:none}
 input:focus,select:focus{outline:none;border-color:#2E9AB3;box-shadow:0 0 0 2px rgba(46,154,179,.1)}
 input[readonly]{background:#f0fbfd;color:#2E9AB3;font-weight:700}
 .sep{height:0.5px;background:#eee;margin:9px 0}
@@ -1862,8 +1869,21 @@ async function exportPDF(){
   let bar=document.querySelector('.export-bar');
   bar.style.visibility='hidden';
   if(editMode)_hideEditCtrl();
-  // Calcular posiciones de separadores de sala ANTES de capturar (con visibilidad hidden no cambia layout)
   const PDF_SCALE=2.5;
+  // Ancho fijo de maquetacion para el PDF. Sin esto, html2canvas arma la
+  // cotizacion al ancho del viewport real: en un iPhone de 375px sale angosta y
+  // luego se estira a los 190mm de la hoja A4, que es el "se ve estirado".
+  // 960 es el max-width del body, o sea el ancho al que se ve en escritorio.
+  // Se fija en el DOM REAL y no solo en html2canvas porque roomSplitsY se mide
+  // aqui abajo con getBoundingClientRect(): si se midiera a 375 y se capturara
+  // a 960, los cortes de pagina caerian en el lugar equivocado.
+  const PDF_ANCHO=960;
+  let estiloBodyPrev=document.body.getAttribute('style')||'';
+  document.body.style.width=PDF_ANCHO+'px';
+  document.body.style.maxWidth=PDF_ANCHO+'px';
+  function _restaurarAncho(){document.body.setAttribute('style',estiloBodyPrev);}
+
+  // Calcular posiciones de separadores de sala ANTES de capturar (con visibilidad hidden no cambia layout)
   let qOutEl=$('qOut');
   let qOutRect=qOutEl.getBoundingClientRect();
   let hdrRows=Array.from($('qBody').querySelectorAll('tr.room-hdr-row'));
@@ -1922,10 +1942,16 @@ async function exportPDF(){
       allowTaint:true,
       backgroundColor:'#ffffff',
       logging:false,
-      imageTimeout:0
+      imageTimeout:0,
+      // El viewport del clon, para que coincida con el ancho ya fijado arriba.
+      windowWidth:PDF_ANCHO,
+      windowHeight:Math.max(900,qOutEl.scrollHeight),
+      scrollX:0,
+      scrollY:0
     });
     // Restaurar logo original
     if(origLogoSrc&&logoImg)logoImg.src=origLogoSrc;
+    _restaurarAncho();
     bar.style.visibility='';
     if(editMode)_showEditCtrl();
     const{jsPDF}=window.jspdf;
@@ -1950,6 +1976,7 @@ async function exportPDF(){
     setTimeout(()=>saveQuote(),400);
   }catch(err){
     if(origLogoSrc&&logoImg)logoImg.src=origLogoSrc;
+    _restaurarAncho();
     bar.style.visibility='';
     if(editMode)_showEditCtrl();
     // El logo se carga desde un archivo local (file://) y en algunos navegadores
