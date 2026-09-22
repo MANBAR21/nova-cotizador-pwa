@@ -189,7 +189,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 
 <div class="tabs">
   <div class="tab on" id="tab1" onclick="showTab(1)">📋 Cotizar</div>
-  <div class="tab" id="tab2" onclick="showTab(2)">🔍 Análisis competitivo</div>
+  <div class="tab" id="tab2" onclick="showTab(2)">📅 Eventos cotizados</div>
 </div>
 
 <div id="t1">
@@ -433,22 +433,30 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 <!-- TAB 2 -->
 <div id="t2" style="display:none">
 <div class="card">
-  <div class="sec-label">Análisis competitivo</div>
-  <p style="font-size:10.5px;color:#555;margin-bottom:11px">Ingresa los valores de la competencia para ver la brecha y el piso mínimo de Nova considerando el costo real de personal.</p>
-  <div class="cmp-row cmp-hdr"><span>Servicio</span><span style="text-align:right">Competencia</span><span style="text-align:right">Nova estándar</span><span style="text-align:right">Diferencia</span></div>
-  <div class="sep"></div>
-  <div class="cmp-row"><span>Sonido integral</span><input id="cmpSn" type="number" placeholder="0" style="text-align:right" oninput="calcComp()"/><span style="text-align:right;font-size:10.5px" id="nvSn">$5.000.000</span><span id="gSn" class="gap-neu">—</span></div>
-  <div class="cmp-row"><span>Iluminación ambiental</span><input id="cmpLzA" type="number" placeholder="0" style="text-align:right" oninput="calcComp()"/><span style="text-align:right;font-size:10.5px" id="nvLzA">—</span><span id="gLzA" class="gap-neu">—</span></div>
-  <div class="cmp-row"><span>Iluminación escenario</span><input id="cmpLzE" type="number" placeholder="0" style="text-align:right" oninput="calcComp()"/><span style="text-align:right;font-size:10.5px" id="nvLzE">—</span><span id="gLzE" class="gap-neu">—</span></div>
-  <div class="cmp-row"><span>Video / Pantallas LED</span><input id="cmpLED" type="number" placeholder="0" style="text-align:right" oninput="calcComp()"/><span style="text-align:right;font-size:10.5px" id="nvLED">—</span><span id="gLED" class="gap-neu">—</span></div>
-  <div class="cmp-row"><span>Estructura</span><input id="cmpStr" type="number" placeholder="0" style="text-align:right" oninput="calcComp()"/><span style="text-align:right;font-size:10.5px" id="nvStr">—</span><span id="gStr" class="gap-neu">—</span></div>
-  <div class="cmp-row"><span>Efectos especiales</span><input id="cmpEf" type="number" placeholder="0" style="text-align:right" oninput="calcComp()"/><span style="text-align:right;font-size:10.5px">$3.500.000</span><span id="gEf" class="gap-neu">—</span></div>
-  <div class="cmp-row" style="margin-top:5px;padding-top:5px;border-top:0.5px solid #eee"><span style="font-weight:700">Total general</span><input id="cmpTot" type="number" placeholder="0" style="text-align:right;font-weight:700;color:#2E9AB3" oninput="calcComp()"/><span style="text-align:right;font-weight:700" id="nvTot">—</span><span id="gTot" class="gap-neu">—</span></div>
-  <div class="sep"></div>
-  <div style="font-size:10.5px;font-weight:700;color:#555;margin-bottom:7px">Personal mínimo estimado:</div>
-  <div class="g3"><div><label>Técnicos sonido</label><input type="number" id="pTecSn" value="2" oninput="calcComp()"/></div><div><label>Técnicos iluminación</label><input type="number" id="pTecLz" value="3" oninput="calcComp()"/></div><div><label>Ingenieros</label><input type="number" id="pIng" value="1" oninput="calcComp()"/></div></div>
-  <div id="cmpResult" style="display:none"><div class="cmp-note" id="cmpNote"></div></div>
-  <button class="btn2" onclick="calcComp()">Analizar brecha →</button>
+  <div class="sec-label">Eventos cotizados</div>
+  <p style="font-size:10.5px;color:#555;margin-bottom:10px">
+    Las cotizaciones por fecha. Las que ya pasaron sin confirmarse no se muestran,
+    y las realizadas hace más de 4 días pasan a Finalizados.</p>
+
+  <div class="g3" style="margin-bottom:9px">
+    <div><label>Mostrar</label>
+      <select id="vzFiltro" onchange="cargarVisualizador()">
+        <option value="todos">Todos</option>
+        <option value="confirmados">Solo confirmados</option>
+        <option value="porconfirmar">Solo por confirmar</option>
+      </select></div>
+    <div><label>Listado</label>
+      <select id="vzGrupo" onchange="cargarVisualizador()">
+        <option value="visualizador">Próximos y sin fecha</option>
+        <option value="finalizados">Finalizados</option>
+      </select></div>
+    <div style="display:flex;align-items:end">
+      <button type="button" class="save-btn" style="width:100%" onclick="cargarVisualizador(true)">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div id="vzEstado" style="font-size:10.5px;color:#888;margin-bottom:8px"></div>
+  <div id="vzLista"></div>
 </div>
 </div>
 
@@ -839,7 +847,7 @@ function togDesc(){descOn=!descOn;$('descNo').className=descOn?'':'on';$('descSi
 function recalcComision(){let pct=parseFloat($('comisionPct')?.value)||0;let el=$('comisionMonto');if(!el)return;if(pct>0){let base=parseInt($('prTotal')?.textContent?.replace(/[^0-9]/g,'')||0)||0;el.textContent=pct+'% sobre el subtotal';}else{el.textContent='';}}
 function _applyComision(rows,totalsObj){let pct=parseFloat($('comisionPct')?.value)||0;if(pct<=0)return;let f=1+pct/100;rows.forEach(r=>{if(r.sub!==undefined)r.sub=Math.round(r.sub*f);if(r.unit!==undefined)r.unit=Math.round(r.unit*f);});if(totalsObj){if(totalsObj.total!==undefined)totalsObj.total=Math.round(totalsObj.total*f);if(totalsObj.addlTotal!==undefined)totalsObj.addlTotal=Math.round(totalsObj.addlTotal*f);if(totalsObj.transpTotal!==undefined)totalsObj.transpTotal=Math.round(totalsObj.transpTotal*f);if(totalsObj.dayTotal!==undefined)totalsObj.dayTotal=Math.round(totalsObj.dayTotal*f);}}
 function togDescMode(){descPct=!descPct;$('dmPct').className=descPct?'on':'';$('dmVal').className=descPct?'':'on';$('descHint').textContent=descPct?'Ingresa el porcentaje (ej: 10 = 10%)':'Ingresa el valor en pesos';$('descAmt').placeholder=descPct?'ej: 10':'ej: 5000000';$('descCalc').textContent='—';}
-function showTab(n){$('tab1').className='tab'+(n===1?' on':'');$('tab2').className='tab'+(n===2?' on':'');$('t1').style.display=n===1?'':'none';$('t2').style.display=n===2?'':'none';}
+function showTab(n){$('tab1').className='tab'+(n===1?' on':'');$('tab2').className='tab'+(n===2?' on':'');$('t1').style.display=n===1?'':'none';$('t2').style.display=n===2?'':'none';if(n===2)cargarVisualizador();}
 function onTipo(){let t=$('tipo').value;$('otroField').style.display=t==='otro'?'block':'none';let si=t==='corporativo'||t==='concierto';if(si!==ivaOn)togIva();}
 
 function getTipoLabel(){let t=$('tipo').value;return{boda:'Boda',grado:'Grado',social:'Social',corporativo:'Corporativo',concierto:'Concierto',otro:$('otroTipo').value||'Otro'}[t]||t;}
@@ -1154,7 +1162,76 @@ function saveQuote(){
   let a=document.createElement('a');a.href=url;a.download=getFilename()+'.json';a.click();
   URL.revokeObjectURL(url);
 }
-function loadQuote(){$('loadFileInput').value='';$('loadFileInput').click();}
+// Abre el selector de archivos. Sigue existiendo porque es lo que nunca falla
+// y es como se manda una cotizacion por WhatsApp.
+function loadQuoteArchivo(){$('loadFileInput').value='';$('loadFileInput').click();}
+
+// "Cargar cotizacion" busca en la nube. Si no hay sesion o no hay red, ofrece
+// el archivo, que es lo que hacia antes. No se pierde el camino viejo.
+async function loadQuote(){
+  if(document.getElementById('novaCargar'))return;
+  const d=document.createElement('div');
+  d.id='novaCargar';
+  d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.35);'+
+    'display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML='<div style="background:#fff;border-radius:10px;max-width:420px;width:100%;max-height:80vh;'+
+    'overflow:auto;padding:20px;font-family:Arial,sans-serif;box-sizing:border-box">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+      '<span style="font-size:15px;font-weight:700;color:#2E9AB3">Cargar cotización</span>'+
+      '<button type="button" id="lcX" style="background:none;border:0;font-size:20px;cursor:pointer;color:#999">×</button>'+
+    '</div>'+
+    '<div id="lcEstado" style="font-size:10.5px;color:#888;margin-bottom:10px"></div>'+
+    '<div id="lcLista"></div>'+
+    '<div style="border-top:0.5px solid #eee;margin-top:12px;padding-top:11px">'+
+      '<button type="button" id="lcArchivo" class="save-btn load-btn" style="width:100%">📂 Cargar desde un archivo</button>'+
+    '</div></div>';
+  document.body.appendChild(d);
+  d.querySelector('#lcX').onclick=()=>d.remove();
+  d.querySelector('#lcArchivo').onclick=()=>{d.remove();loadQuoteArchivo();};
+  d.onclick=e=>{if(e.target===d)d.remove();};
+
+  const est=d.querySelector('#lcEstado'), lista=d.querySelector('#lcLista');
+
+  if(!identidadCacheada()){
+    est.textContent='';
+    lista.innerHTML='<p style="font-size:11.5px;color:#555;margin:0">Entra con tu cuenta para ver aquí las cotizaciones guardadas en el sistema. '+
+      '<a href="#" id="lcEntrar" style="color:#2E9AB3">Entrar</a></p>';
+    lista.querySelector('#lcEntrar').onclick=e=>{e.preventDefault();d.remove();mostrarLogin();};
+    return;
+  }
+  if(!navigator.onLine){
+    est.textContent='';
+    lista.innerHTML='<p style="font-size:11.5px;color:#c98a00;margin:0">Sin conexión. Para traer una cotización del sistema necesitas señal; mientras tanto puedes cargarla desde un archivo.</p>';
+    return;
+  }
+
+  est.textContent='Buscando...';
+  try{
+    const sb=getSb();
+    const{data,error}=await sb.from('v_cotizaciones').select('*').order('id',{ascending:false});
+    if(error)throw error;
+    if(!data.length){est.textContent='';lista.innerHTML='<p style="font-size:11.5px;color:#888;margin:0">No hay cotizaciones guardadas todavía.</p>';return;}
+    est.textContent=data.length+' cotización(es)';
+    lista.innerHTML=data.map(r=>
+      '<div class="lcItem" data-id="'+r.id+'" style="border:0.5px solid #e2e6e8;border-radius:6px;'+
+        'padding:9px 11px;margin-bottom:6px;cursor:pointer">'+
+        '<div style="display:flex;justify-content:space-between;gap:8px">'+
+          '<span style="font-weight:700;font-size:12px">'+(r.cliente||'Sin cliente')+'</span>'+
+          '<span style="font-size:11px;color:#2E9AB3">'+vzFmtMoneda(r.total)+'</span></div>'+
+        '<div style="font-size:10.5px;color:#666;margin-top:3px">'+vzFmtFecha(r.fecha_evento)+
+          ' · '+(VZ_ESTADO[r.estado]||r.estado)+'</div>'+
+      '</div>').join('');
+    lista.querySelectorAll('.lcItem').forEach(el=>{
+      el.onclick=()=>alert('Traer la cotización #'+el.dataset.id+' al formulario todavía no está construido.\n\n'+
+        'La lista ya lee del sistema; falta reconstruir el formulario a partir de las líneas guardadas, '+
+        'que es más delicado porque toca el motor de precios.');
+    });
+  }catch(e){
+    est.style.color='#C0392B';
+    est.textContent='No se pudo consultar: '+(e&&e.message||e);
+    lista.innerHTML='';
+  }
+}
 function onLoadFile(e){
   let file=e.target.files[0];if(!file)return;
   let reader=new FileReader();
@@ -2386,6 +2463,101 @@ function mostrarPonerClave(){
   };
   b.addEventListener('keydown',ev=>{if(ev.key==='Enter')btn.click();});
   setTimeout(()=>a.focus(),50);
+}
+
+// ── VISUALIZADOR DE EVENTOS COTIZADOS ────────────────────────────────────
+// Lee v_visualizador_eventos / v_eventos_finalizados. Esas vistas ya aplican
+// los permisos y anulan los precios segun quien pregunta, asi que aqui no se
+// decide nada de seguridad: lo que llega es lo que la persona puede ver.
+const VZ_CACHE='novaVisualizadorCache';
+
+function vzFmtMoneda(n){return n==null?'—':'$'+Number(n).toLocaleString('es-CO');}
+function vzFmtFecha(f){
+  if(!f)return 'Sin fecha';
+  const[y,m,d]=f.split('-');
+  return parseInt(d)+' '+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][parseInt(m)-1]+' '+y;
+}
+const VZ_ESTADO={negociacion:'🟡 Negociación',confirmada:'🟢 Confirmada',
+                 llamado_equipos:'🔵 Llamado de equipos',cancelado:'🔴 Cancelado'};
+
+function vzPintar(filas,desdeCache,fechaCache){
+  const cont=$('vzLista'), est=$('vzEstado');
+  const filtro=$('vzFiltro').value;
+  let f=filas.slice();
+  if(filtro==='confirmados')f=f.filter(r=>r.confirmado);
+  if(filtro==='porconfirmar')f=f.filter(r=>!r.confirmado);
+
+  // Sin fecha primero, después por fecha ascendente. Lo que no tiene fecha es
+  // lo que está en negociación temprana: es lo que hay que empujar.
+  f.sort((a,b)=>{
+    if(!a.fecha_evento&&!b.fecha_evento)return 0;
+    if(!a.fecha_evento)return -1;
+    if(!b.fecha_evento)return 1;
+    return a.fecha_evento<b.fecha_evento?-1:1;
+  });
+
+  est.textContent=desdeCache
+    ? 'Mostrando lo último que se vio el '+vzFmtFecha((fechaCache||'').slice(0,10))+' — sin conexión'
+    : f.length+' cotización(es)';
+  est.style.color=desdeCache?'#c98a00':'#888';
+
+  if(!f.length){cont.innerHTML='<p style="font-size:11px;color:#888">Nada que mostrar con este filtro.</p>';return;}
+
+  cont.innerHTML=f.map(r=>{
+    const dias=r.dias_faltantes;
+    let cuando='';
+    if(r.fecha_evento){
+      if(dias===0)cuando='hoy';
+      else if(dias>0)cuando='en '+dias+' día'+(dias===1?'':'s');
+      else cuando='hace '+Math.abs(dias)+' día'+(Math.abs(dias)===1?'':'s');
+    }
+    return '<div style="border:0.5px solid #e2e6e8;border-radius:6px;padding:9px 11px;margin-bottom:6px;background:#fff">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
+        '<span style="font-weight:700;font-size:12px">'+(r.cliente||'Sin cliente')+'</span>'+
+        '<span style="font-size:11px;color:#2E9AB3;font-weight:700">'+vzFmtMoneda(r.total)+'</span>'+
+      '</div>'+
+      '<div style="font-size:10.5px;color:#666;margin-top:3px">'+
+        vzFmtFecha(r.fecha_evento)+(cuando?' · '+cuando:'')+' · '+(VZ_ESTADO[r.estado]||r.estado)+
+      '</div>'+
+      (r.incluye_precios===false?'<div style="font-size:9.5px;color:#aaa;margin-top:2px">Sin permiso para ver montos</div>':'')+
+    '</div>';
+  }).join('');
+}
+
+async function cargarVisualizador(forzar){
+  const est=$('vzEstado'), cont=$('vzLista');
+  const vista=$('vzGrupo').value==='finalizados'?'v_eventos_finalizados':'v_visualizador_eventos';
+
+  if(!identidadCacheada()){
+    est.textContent='';
+    cont.innerHTML='<p style="font-size:11.5px;color:#555">Entra con tu cuenta para ver aquí las cotizaciones guardadas. '+
+      '<a href="#" onclick="mostrarLogin();return false" style="color:#2E9AB3">Entrar</a></p>';
+    return;
+  }
+
+  const cache=(()=>{try{return JSON.parse(localStorage.getItem(VZ_CACHE)||'null');}catch(e){return null;}})();
+
+  if(!navigator.onLine){
+    if(cache&&cache[vista])vzPintar(cache[vista].filas,true,cache[vista].en);
+    else{est.textContent='Sin conexión y sin nada guardado de antes.';cont.innerHTML='';}
+    return;
+  }
+
+  est.textContent='Cargando...';
+  try{
+    const sb=getSb();
+    const{data,error}=await sb.from(vista).select('*');
+    if(error)throw error;
+    const guardar=cache||{};
+    guardar[vista]={filas:data,en:new Date().toISOString()};
+    try{localStorage.setItem(VZ_CACHE,JSON.stringify(guardar));}catch(e){}
+    vzPintar(data,false);
+  }catch(e){
+    // Si falla (sesión vencida, por ejemplo) se muestra lo cacheado en vez de
+    // dejar la pantalla en blanco.
+    if(cache&&cache[vista])vzPintar(cache[vista].filas,true,cache[vista].en);
+    else{est.style.color='#C0392B';est.textContent='No se pudo cargar: '+(e&&e.message||e);cont.innerHTML='';}
+  }
 }
 
 function mostrarLogin(){
