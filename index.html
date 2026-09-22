@@ -2043,25 +2043,25 @@ function _doExcel(){
   const cN=(v,s,z)=>{let o={v,t:'n'};if(s)o.s=s;o.z=z||'"$"#,##0';return o;};
 
   // Style presets
-  const hdrBig={font:{bold:true,color:{rgb:WHITE},name:'Calibri',sz:14},fill:tealFill,alignment:{horizontal:'center',vertical:'center'}};
-  const hdrSub={font:{color:{rgb:WHITE},name:'Calibri',sz:9},fill:tealFill,alignment:{horizontal:'center',vertical:'center'}};
+  const hdrBig={font:{bold:true,color:{rgb:WHITE},name:'Arial',sz:14},fill:tealFill,alignment:{horizontal:'center',vertical:'center'}};
+  const hdrSub={font:{color:{rgb:WHITE},name:'Arial',sz:9},fill:tealFill,alignment:{horizontal:'center',vertical:'center'}};
   const emptyTeal={fill:tealFill};
   const emptyDteal={fill:dtealFill};
   const emptyGray={fill:grayFill,border:bdr()};
   const emptyLgray={fill:lgrayFill,border:bdr()};
-  const infoLbl={font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10},border:bdr()};
-  const infoVal={font:{color:{rgb:DARK},name:'Calibri',sz:10},border:bdr()};
-  const thStyle=(align)=>({font:{bold:true,color:{rgb:WHITE},name:'Calibri',sz:10},fill:dtealFill,alignment:{horizontal:align||'center',vertical:'center'},border:bdr()});
-  const catStyle={font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10},fill:grayFill,border:bdr()};
-  const catPrStyle={font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10},fill:grayFill,border:bdr(),alignment:{horizontal:'right'}};
-  const subStyle={font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9},fill:lgrayFill,border:bdr()};
-  const rowStyle=(align)=>({font:{color:{rgb:DARK},name:'Calibri',sz:10},border:bdr(),alignment:{horizontal:align||'left'}});
-  const rowPr=(align)=>({font:{color:{rgb:DARK},name:'Calibri',sz:10},border:bdr(),alignment:{horizontal:align||'right'}});
-  const ftLbl={font:{color:{rgb:MID},name:'Calibri',sz:10},border:bdr(),alignment:{horizontal:'right'}};
-  const ftVal={font:{bold:true,color:{rgb:DARK},name:'Calibri',sz:10},border:bdr(),alignment:{horizontal:'right'}};
-  const totLbl={font:{bold:true,color:{rgb:WHITE},name:'Calibri',sz:12},fill:tealFill,border:bdr(),alignment:{horizontal:'center',vertical:'center'}};
-  const totVal={font:{bold:true,color:{rgb:WHITE},name:'Calibri',sz:13},fill:tealFill,border:bdr(),alignment:{horizontal:'right',vertical:'center'}};
-  const notaStyle={font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9},alignment:{horizontal:'left'}};
+  const infoLbl={font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10},border:bdr()};
+  const infoVal={font:{color:{rgb:DARK},name:'Arial',sz:10},border:bdr()};
+  const thStyle=(align)=>({font:{bold:true,color:{rgb:WHITE},name:'Arial',sz:10},fill:dtealFill,alignment:{horizontal:align||'center',vertical:'center'},border:bdr()});
+  const catStyle={font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10},fill:grayFill,border:bdr()};
+  const catPrStyle={font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10},fill:grayFill,border:bdr(),alignment:{horizontal:'right'}};
+  const subStyle={font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9},fill:lgrayFill,border:bdr()};
+  const rowStyle=(align)=>({font:{color:{rgb:DARK},name:'Arial',sz:10},border:bdr(),alignment:{horizontal:align||'left'}});
+  const rowPr=(align)=>({font:{color:{rgb:DARK},name:'Arial',sz:10},border:bdr(),alignment:{horizontal:align||'right'}});
+  const ftLbl={font:{color:{rgb:MID},name:'Arial',sz:10},border:bdr(),alignment:{horizontal:'right'}};
+  const ftVal={font:{bold:true,color:{rgb:DARK},name:'Arial',sz:10},border:bdr(),alignment:{horizontal:'right'}};
+  const totLbl={font:{bold:true,color:{rgb:WHITE},name:'Arial',sz:12},fill:tealFill,border:bdr(),alignment:{horizontal:'center',vertical:'center'}};
+  const totVal={font:{bold:true,color:{rgb:WHITE},name:'Arial',sz:13},fill:tealFill,border:bdr(),alignment:{horizontal:'right',vertical:'center'}};
+  const notaStyle={font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9},alignment:{horizontal:'left'}};
 
   let ws={};
   let merges=[];
@@ -2080,7 +2080,7 @@ function _doExcel(){
 
   // ── INFO CLIENTE ──
   set(padTo([c('Fecha emisión:',infoLbl),c(fmtD(hoy),infoVal),c('Cliente:',infoLbl),c($('cli').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
-  set(padTo([c('Fecha evento:',infoLbl),c(fmtD(fecha)||'—',{...infoVal,font:{bold:true,color:{rgb:DARK},name:'Calibri',sz:10}}),c('Lugar:',infoLbl),c($('venue').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
+  set(padTo([c('Fecha evento:',infoLbl),c(fmtD(fecha)||'—',{...infoVal,font:{bold:true,color:{rgb:DARK},name:'Arial',sz:10}}),c('Lugar:',infoLbl),c($('venue').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
   set(padTo([c('Tipo de evento:',infoLbl),c(getTipoLabel(),infoVal),c('Teléfono:',infoLbl),c($('tel').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
   set(padTo([c('E-mail:',infoLbl),c($('email').value||'—',infoVal),empty(infoVal),empty(infoVal)]));mrg(R-1,1,R-1,showDias?LC:3);
   if(showDias){set(padTo([c('Días del evento:',infoLbl),c(numDias,infoVal),c('% cobro día adicional:',infoLbl),c(fmtN(pctDia)+'%',infoVal)]));}
@@ -2095,7 +2095,7 @@ function _doExcel(){
   const dayXlsCells=(row)=>{
     if(!showDias)return[];
     if(row.sub===undefined)return[empty({border:bdr()}),empty({border:bdr()})];
-    if(row.noDay)return[c('—',{...rowPr(),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}}),c('—',{...rowPr(),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}})];
+    if(row.noDay)return[c('—',{...rowPr(),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}}),c('—',{...rowPr(),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}})];
     let effPct=(row.pct!=null?row.pct:pctDia);
     let xDays=row.extraDays!=null?row.extraDays:numDias-1;
     let extra=Math.round(row.sub*effPct/100),allD=row.sub+extra*xDays;
@@ -2103,7 +2103,7 @@ function _doExcel(){
   };
   allRows.forEach(row=>{
     if(row.t==='roomhdr'){
-      set(padTo([c('── '+row.desc+' ──',{font:{bold:true,color:{rgb:WHITE},name:'Calibri',sz:10},fill:dtealFill,border:bdr()})],emptyDteal));mrg(R-1,0,R-1,LC);
+      set(padTo([c('── '+row.desc+' ──',{font:{bold:true,color:{rgb:WHITE},name:'Arial',sz:10},fill:dtealFill,border:bdr()})],emptyDteal));mrg(R-1,0,R-1,LC);
     } else if(row.t==='cat'){
       if(row.sub){
         if(showDias)set([c(row.desc,catStyle),empty(emptyGray),cN(row.sub,catPrStyle),...dayXlsCells(row)]);
@@ -2118,15 +2118,15 @@ function _doExcel(){
     } else if(row.t==='sub'){
       set(padTo([c('  '+row.desc,subStyle)],emptyLgray));mrg(R-1,0,R-1,LC);
     } else if(row.t==='subq'){
-      set(padTo([c('  '+row.desc,subStyle),c(row.qty,{...subStyle,alignment:{horizontal:'right'}}),c('Incluido',{...subStyle,alignment:{horizontal:'right'},font:{italic:true,name:'Calibri',sz:9}}),empty(emptyLgray)],emptyLgray));mrg(R-1,2,R-1,LC);
+      set(padTo([c('  '+row.desc,subStyle),c(row.qty,{...subStyle,alignment:{horizontal:'right'}}),c('Incluido',{...subStyle,alignment:{horizontal:'right'},font:{italic:true,name:'Arial',sz:9}}),empty(emptyLgray)],emptyLgray));mrg(R-1,2,R-1,LC);
     } else if(row.t==='row'){
       let qtyXls=row.qtyUnit?c((row.qty??'')+(row.qtyUnit||''),rowStyle('center')):{v:row.qty,s:{...rowStyle('center'),t:'n',z:'#,##0'}};
       if(showDias)set([c(row.desc,rowStyle()),qtyXls,cN(row.sub,rowPr()),...dayXlsCells(row)]);
       else set([c(row.desc,rowStyle()),qtyXls,cN(row.unit,rowPr()),cN(row.sub,rowPr())]);
     } else if(row.t==='cortesia'){
       let base=showDias
-        ?[c(row.desc,rowStyle()),c(1,{...rowStyle('center'),t:'n'}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}})]
-        :[c(row.desc,rowStyle()),c(1,{...rowStyle('center'),t:'n'}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Calibri',sz:9}})];
+        ?[c(row.desc,rowStyle()),c(1,{...rowStyle('center'),t:'n'}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}})]
+        :[c(row.desc,rowStyle()),c(1,{...rowStyle('center'),t:'n'}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}}),c('CORTESÍA',{...rowStyle('right'),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}})];
       set(base);
     }
   });
@@ -2140,11 +2140,11 @@ function _doExcel(){
   };
   set(new Array(LC+1).fill(null));
   ftRow(showDias?'Subtotal día 1':'Subtotal',allTotal+allAddlTotalXls);
-  if(showDias)ftRow(`Días adicionales (${numDias-1} día${numDias>2?'s':''} extra)`,extraDayTotalXls+extraAddlDayTotalXls,{...ftLbl,font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10}},{...ftVal,font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10}});
-  if(allTranspTotalXls>0)ftRow('Transporte',allTranspTotalXls,{...ftLbl,font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10}},{...ftVal,font:{bold:true,color:{rgb:DTEAL},name:'Calibri',sz:10}});
+  if(showDias)ftRow(`Días adicionales (${numDias-1} día${numDias>2?'s':''} extra)`,extraDayTotalXls+extraAddlDayTotalXls,{...ftLbl,font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10}},{...ftVal,font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10}});
+  if(allTranspTotalXls>0)ftRow('Transporte',allTranspTotalXls,{...ftLbl,font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10}},{...ftVal,font:{bold:true,color:{rgb:DTEAL},name:'Arial',sz:10}});
   if(descVal>0){
     let dlbl=($('descMot').value||'Descuento')+(descPct?' ('+$('descAmt').value+'%)':'');
-    ftRow(dlbl,-descVal,{...ftLbl,font:{color:{rgb:RED},name:'Calibri',sz:10}},{...ftVal,font:{bold:true,color:{rgb:RED},name:'Calibri',sz:10}});
+    ftRow(dlbl,-descVal,{...ftLbl,font:{color:{rgb:RED},name:'Arial',sz:10}},{...ftVal,font:{bold:true,color:{rgb:RED},name:'Arial',sz:10}});
   }
   if(ivaOn)ftRow('IVA (19%)',iva);
 
@@ -2152,7 +2152,7 @@ function _doExcel(){
   {
     let lbl=(showDias?' · Cotización para '+numDias+' días de evento':'');
     let arr=new Array(LC+1).fill(null);
-    arr[0]=c('Oferta válida 15 días · 50% anticipado · 50% restante 48h antes del evento'+lbl,{...totLbl,font:{color:{rgb:'E0F5FA'},name:'Calibri',sz:9},alignment:{horizontal:'left',vertical:'center'}});
+    arr[0]=c('Oferta válida 15 días · 50% anticipado · 50% restante 48h antes del evento'+lbl,{...totLbl,font:{color:{rgb:'E0F5FA'},name:'Arial',sz:9},alignment:{horizontal:'left',vertical:'center'}});
     for(let i=1;i<LC-1;i++)arr[i]=empty({fill:tealFill,border:bdr()});
     arr[LC-1]=c('TOTAL',totLbl);arr[LC]=cN(grand,totVal);
     set(arr);
@@ -2279,6 +2279,203 @@ const SUPABASE_URL='https://vzqbieygdablitjajrem.supabase.co';
 const SUPABASE_KEY='sb_publishable_mFnZrCeHfkGR5UFYzgQCcw_c14Zrf3h';
 let _sbClient=null;
 function getSb(){if(!_sbClient&&window.supabase)_sbClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);return _sbClient;}
+
+// ── SESIÓN ───────────────────────────────────────────────────────────────
+// La regla que gobierna todo esto: el token de Supabase dura 1 hora y
+// renovarlo necesita red. Una app que vive sin señal no puede quedar
+// bloqueada por eso.
+//
+//   · Cotizar y exportar NO requieren token válido. Son locales y funcionan
+//     con la identidad cacheada del último ingreso, aunque esté vencida.
+//   · El token solo tiene que servir al ESCRIBIR al servidor, y eso solo
+//     pasa cuando hay red.
+//   · Si la renovación falla, la cola de pendientes NO se descarta.
+//
+// Bloquear la app al vencer el token la volvería inútil justo en el
+// escenario para el que se construyó.
+const NOVA_IDENT='novaIdentidad';   // {email, nombre, rol, visto_en}
+
+function identidadCacheada(){try{return JSON.parse(localStorage.getItem(NOVA_IDENT)||'null');}catch(e){return null;}}
+function guardarIdentidad(i){try{localStorage.setItem(NOVA_IDENT,JSON.stringify(i));}catch(e){}}
+function borrarIdentidad(){try{localStorage.removeItem(NOVA_IDENT);}catch(e){}}
+
+function sesionActiva(){
+  // "Activa" para efectos de la interfaz: hay alguien conocido. El token
+  // puede estar vencido; eso solo importa al escribir.
+  return !!identidadCacheada();
+}
+
+async function refrescarSesion(){
+  // Devuelve true si hay un token utilizable AHORA. Solo se llama antes de
+  // escribir al servidor, nunca para dejar usar la app.
+  const sb=getSb(); if(!sb)return false;
+  try{
+    const{data,error}=await sb.auth.getSession();
+    if(error||!data||!data.session)return false;
+    // getSession ya renueva solo si hace falta y hay red.
+    return !!data.session.access_token;
+  }catch(e){return false;}
+}
+
+async function ingresar(email,clave){
+  const sb=getSb();
+  if(!sb)throw new Error('No se pudo cargar el cliente de Supabase');
+  const{data,error}=await sb.auth.signInWithPassword({email:email.trim(),password:clave});
+  if(error)throw error;
+  // El rol y los permisos viven en la base, no en el token: se consultan una
+  // vez y se cachean para que la app sepa qué mostrar estando sin señal.
+  let perms=[];
+  try{const r=await sb.rpc('mis_permisos'); if(!r.error&&r.data)perms=r.data;}catch(e){}
+  guardarIdentidad({email:data.user.email,id:data.user.id,permisos:perms,visto_en:new Date().toISOString()});
+  return data.user;
+}
+
+// Supabase manda a la gente aquí desde el correo de invitación o de
+// recuperación, con un token en el fragmento de la URL (#access_token=...).
+// supabase-js lo canjea solo por una sesión, pero eso deja a la persona
+// dentro SIN contraseña: la próxima vez no podría entrar. Por eso aquí se le
+// pide ponerla antes de seguir.
+function hayTokenDeCorreo(){
+  const h=location.hash||'';
+  return h.includes('access_token=')&&(h.includes('type=invite')||h.includes('type=recovery')||h.includes('type=signup'));
+}
+
+function mostrarPonerClave(){
+  if(document.getElementById('novaPonerClave'))return;
+  const d=document.createElement('div');
+  d.id='novaPonerClave';
+  d.style.cssText='position:fixed;inset:0;z-index:100001;background:#f5f7f8;'+
+    'display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML=
+    '<div style="background:#fff;border-radius:10px;padding:26px 22px;max-width:340px;width:100%;'+
+      'box-shadow:0 6px 28px rgba(0,0,0,.12);font-family:Arial,sans-serif;box-sizing:border-box">'+
+      '<div style="font-size:17px;font-weight:700;color:#2E9AB3;margin-bottom:4px">Elige tu contraseña</div>'+
+      '<div style="font-size:11.5px;color:#888;margin-bottom:18px">Es la que vas a usar de ahora en adelante para entrar al cotizador.</div>'+
+      '<label style="font-size:10.5px;color:#555;display:block;margin-bottom:3px">Contraseña nueva</label>'+
+      '<input id="pcA" type="password" autocomplete="new-password" style="margin-bottom:11px"/>'+
+      '<label style="font-size:10.5px;color:#555;display:block;margin-bottom:3px">Repítela</label>'+
+      '<input id="pcB" type="password" autocomplete="new-password" style="margin-bottom:15px"/>'+
+      '<button id="pcBtn" type="button" style="width:100%;background:#2E9AB3;color:#fff;border:0;'+
+        'border-radius:6px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Guardar y entrar</button>'+
+      '<div id="pcMsg" style="font-size:11.5px;margin-top:11px;min-height:15px;color:#C0392B"></div>'+
+    '</div>';
+  document.body.appendChild(d);
+  const a=d.querySelector('#pcA'), b=d.querySelector('#pcB'),
+        btn=d.querySelector('#pcBtn'), msg=d.querySelector('#pcMsg');
+  btn.onclick=async()=>{
+    msg.style.color='#C0392B';
+    if(a.value.length<8){msg.textContent='Usa al menos 8 caracteres.';return;}
+    if(a.value!==b.value){msg.textContent='Las dos no coinciden.';return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+    try{
+      const sb=getSb();
+      const{error}=await sb.auth.updateUser({password:a.value});
+      if(error)throw error;
+      const{data}=await sb.auth.getUser();
+      let perms=[];
+      try{const r=await sb.rpc('mis_permisos'); if(!r.error&&r.data)perms=r.data;}catch(e){}
+      guardarIdentidad({email:data.user.email,id:data.user.id,permisos:perms,visto_en:new Date().toISOString()});
+      history.replaceState(null,'',location.pathname+location.search); // borra el token de la barra
+      d.remove();
+      pintarBarraSesion();
+      flushPendingQueue();
+    }catch(e){
+      btn.disabled=false;btn.textContent='Guardar y entrar';
+      msg.textContent='No se pudo guardar: '+(e&&e.message||e);
+    }
+  };
+  b.addEventListener('keydown',ev=>{if(ev.key==='Enter')btn.click();});
+  setTimeout(()=>a.focus(),50);
+}
+
+function mostrarLogin(){
+  if(document.getElementById('novaLogin'))return;
+  const hayRed=navigator.onLine;
+  const d=document.createElement('div');
+  d.id='novaLogin';
+  d.style.cssText='position:fixed;inset:0;z-index:100000;background:#f5f7f8;'+
+    'display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML=
+    '<div style="background:#fff;border-radius:10px;padding:26px 22px;max-width:340px;width:100%;'+
+      'box-shadow:0 6px 28px rgba(0,0,0,.12);font-family:Arial,sans-serif;box-sizing:border-box">'+
+      '<div style="font-size:17px;font-weight:700;color:#2E9AB3;margin-bottom:4px">Cotizador Nova</div>'+
+      '<div style="font-size:11.5px;color:#888;margin-bottom:18px">Entra con tu correo de Nova Corp.</div>'+
+      (hayRed?'':'<div style="font-size:11.5px;color:#c98a00;background:#fff8e6;border-radius:5px;'+
+        'padding:9px 10px;margin-bottom:14px">Sin conexión. Para entrar por primera vez en este '+
+        'dispositivo necesitas señal. Después la app funciona sin ella.</div>')+
+      '<label style="font-size:10.5px;color:#555;display:block;margin-bottom:3px">Correo</label>'+
+      '<input id="lgEmail" type="email" autocomplete="username" inputmode="email" '+
+        'placeholder="tucorreo@novaproductions.co" style="margin-bottom:11px"/>'+
+      '<label style="font-size:10.5px;color:#555;display:block;margin-bottom:3px">Contraseña</label>'+
+      '<input id="lgPass" type="password" autocomplete="current-password" style="margin-bottom:15px"/>'+
+      '<button id="lgBtn" type="button" style="width:100%;background:#2E9AB3;color:#fff;border:0;'+
+        'border-radius:6px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Entrar</button>'+
+      '<div id="lgMsg" style="font-size:11.5px;margin-top:11px;min-height:15px;color:#C0392B"></div>'+
+    '</div>';
+  document.body.appendChild(d);
+
+  const btn=d.querySelector('#lgBtn'), msg=d.querySelector('#lgMsg');
+  const em=d.querySelector('#lgEmail'), pa=d.querySelector('#lgPass');
+  async function intentar(){
+    msg.style.color='#C0392B';
+    if(!em.value.trim()||!pa.value){msg.textContent='Escribe tu correo y tu contraseña.';return;}
+    btn.disabled=true;btn.textContent='Entrando...';msg.textContent='';
+    try{
+      await ingresar(em.value,pa.value);
+      d.remove();
+      pintarBarraSesion();
+      flushPendingQueue();
+    }catch(e){
+      btn.disabled=false;btn.textContent='Entrar';
+      const m=(e&&e.message||'').toLowerCase();
+      // Mensajes en español y útiles: "Invalid login credentials" no le dice
+      // nada a nadie, y sin red el error real es otro.
+      if(!navigator.onLine) msg.textContent='Sin conexión. No se puede verificar tu contraseña ahora.';
+      else if(m.includes('invalid')) msg.textContent='Correo o contraseña incorrectos.';
+      else if(m.includes('email not confirmed')) msg.textContent='Tu cuenta existe pero falta confirmar el correo.';
+      else msg.textContent='No se pudo entrar: '+(e&&e.message||e);
+    }
+  }
+  btn.onclick=intentar;
+  pa.addEventListener('keydown',ev=>{if(ev.key==='Enter')intentar();});
+  em.addEventListener('keydown',ev=>{if(ev.key==='Enter')pa.focus();});
+  setTimeout(()=>em.focus(),50);
+}
+
+// El login NO bloquea la app. Quien no ha entrado cotiza y exporta igual; solo
+// se pierde lo de la nube. Es lo unico compatible con el requisito de que
+// funcione sin senal: verificar una contrasena necesita red, asi que un login
+// obligatorio deja la app inservible para quien nunca alcanzo a entrar y se
+// fue sin cobertura. Esa es la razon, no una preferencia de diseno.
+function pintarBarraSesion(){
+  let b=document.getElementById('novaSesion');
+  if(!b){
+    b=document.createElement('div'); b.id='novaSesion';
+    b.style.cssText='font-size:10px;color:#888;text-align:right;margin:-2px 0 6px';
+    const cont=document.querySelector('.card')||document.body;
+    cont.parentNode.insertBefore(b,cont);
+  }
+  const i=identidadCacheada();
+  if(i){
+    b.innerHTML='<span>'+i.email+'</span> · '+
+      '<a href="#" id="novaSalir" style="color:#2E9AB3;text-decoration:none">Cerrar sesión</a>';
+    b.querySelector('#novaSalir').onclick=e=>{e.preventDefault();salir();};
+  }else{
+    b.innerHTML='<a href="#" id="novaEntrar" style="color:#2E9AB3;text-decoration:none">Entrar</a>'+
+      '<span style="color:#bbb"> · cotizas igual sin entrar</span>';
+    b.querySelector('#novaEntrar').onclick=e=>{e.preventDefault();mostrarLogin();};
+  }
+}
+
+async function salir(){
+  const sb=getSb();
+  const pend=getPendingQueue().length;
+  if(pend>0&&!confirm('Tienes '+pend+' cotización(es) sin sincronizar. Si cierras sesión se quedan en este dispositivo hasta que vuelvas a entrar. ¿Continuar?'))return false;
+  try{if(sb)await sb.auth.signOut();}catch(e){}
+  borrarIdentidad();
+  location.reload();
+  return true;
+}
 
 const AREA_MAP={
   'Sonido':'SONIDO','DJ':'SONIDO',
@@ -2413,6 +2610,26 @@ async function guardarEnSistema(){
 async function flushPendingQueue(){
   let q=getPendingQueue();
   if(!q.length)return;
+
+  // Antes de vaciar la cola hay que tener un token utilizable. Si no se puede
+  // renovar, la cola se CONSERVA: perder cotizaciones porque venció un token
+  // sería el mismo tipo de fallo que el id que pisaba cotizaciones.
+  if(!navigator.onLine){
+    setSyncStatus(q.length+' cotización(es) pendientes — sin conexión','#c98a00');
+    return;
+  }
+  if(!(await refrescarSesion())){
+    // Quien YA habia entrado: se le vencio la sesion, se le abre el login.
+    // Quien nunca entro: solo se le avisa. Abrirle una pantalla de contrasena
+    // que no pidio, por algo que ni sabe que existe, seria castigarlo por
+    // haber guardado una cotizacion.
+    const conocido=!!identidadCacheada();
+    setSyncStatus(q.length+' cotización(es) sin sincronizar — '+
+      (conocido?'vuelve a entrar para subirlas':'entra para subirlas a la nube'),'#c98a00');
+    if(conocido&&!document.getElementById('novaLogin'))mostrarLogin();
+    return;
+  }
+
   let remaining=[];
   for(const entry of q){
     try{
@@ -2432,6 +2649,22 @@ async function flushPendingQueue(){
 
 window.addEventListener('online',flushPendingQueue);
 window.addEventListener('load',()=>{setTimeout(flushPendingQueue,1500);});
+
+// ── Arranque de sesión ───────────────────────────────────────────────────
+// Si ya entró alguna vez en este dispositivo, la app abre directo aunque no
+// haya señal y aunque el token esté vencido. Solo se pide entrar cuando no
+// hay identidad cacheada, o al fallar una escritura al servidor.
+window.addEventListener('load',async()=>{
+  // Llegó desde el correo: primero poner contraseña, antes que nada.
+  if(hayTokenDeCorreo()){
+    // supabase-js canjea el token del fragmento solo; darle un instante.
+    getSb(); await new Promise(r=>setTimeout(r,600));
+    mostrarPonerClave();
+    return;
+  }
+  // Siempre se pinta la barra; nunca se abre el login solo.
+  pintarBarraSesion();
+});
 
 // ── AUTOCHEQUEO ──────────────────────────────────────────────────────────
 // Escribe _selfCheck() en la consola del navegador. Verifica lo unico que
