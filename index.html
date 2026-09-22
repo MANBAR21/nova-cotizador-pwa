@@ -456,6 +456,17 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
     </div>
   </div>
 
+  <div class="g2" style="margin-bottom:7px">
+    <div><label>Buscar por cliente</label>
+      <input id="vzBuscar" placeholder="nombre del cliente" oninput="vzRepintar()"/></div>
+    <div><label>Creada por</label>
+      <select id="vzAutor" onchange="vzRepintar()"><option value="">Cualquiera</option></select></div>
+  </div>
+  <div class="g2" style="margin-bottom:9px">
+    <div><label>Desde</label><input id="vzDesde" type="date" onchange="vzRepintar()"/></div>
+    <div><label>Hasta</label><input id="vzHasta" type="date" onchange="vzRepintar()"/></div>
+  </div>
+
   <div id="vzEstado" style="font-size:10.5px;color:#888;margin-bottom:8px"></div>
   <div id="vzLista"></div>
 </div>
@@ -1167,6 +1178,107 @@ function saveQuote(){
 // y es como se manda una cotizacion por WhatsApp.
 function loadQuoteArchivo(){$('loadFileInput').value='';$('loadFileInput').click();}
 
+// ── Listado de "Cargar cotizacion" ───────────────────────────────────────
+// Aqui SI salen las ocultas, en gris: quitarlas del visualizador es limpiar la
+// vista de eventos, no esconderlas para siempre. Las versiones anteriores de
+// una cotizacion sobrescrita tambien caen aqui, ya renombradas por la base.
+let _lcDatos=null;
+
+// Trae una cotizacion de la nube al formulario. No reconstruye nada: pide el
+// estado guardado y lo mete por el MISMO camino que un archivo .json, para que
+// el motor de precios sea uno solo.
+async function abrirCotizacion(id, sePuedeAbrir){
+  if(sePuedeAbrir===false){
+    alert('Esta cotización se guardó antes de que se empezara a guardar el formulario, '+
+          'así que no se puede reabrir desde aquí.\n\n'+
+          'Sí puedes abrirla desde su archivo .json si lo tienes.');
+    return;
+  }
+  const pend=getPendingQueue().length;
+  if(!confirm('Traer esta cotización al formulario?\n\n'+
+    'Se reemplaza lo que tengas en pantalla ahora'+(pend?' (tus '+pend+' pendientes no se tocan)':'')+'.'))return;
+  try{
+    const{data,error}=await getSb().rpc('cargar_cotizacion',{p_id:id});
+    if(error)throw error;
+    if(!data||!data.ok){
+      alert(data&&data.motivo==='sin_estado_guardado'
+        ? 'Esa cotización no tiene guardado el formulario, solo sus líneas. No se puede reabrir.'
+        : 'No se pudo abrir.');
+      return;
+    }
+    // Mismo camino que onLoadFile: se arma un archivo y se usa el cargador de
+    // siempre. Cero logica duplicada.
+    const txt=JSON.stringify(data.estado_app);
+    const file=new File([txt],'cotizacion.json',{type:'application/json'});
+    onLoadFile({target:{files:[file]}});
+    // La identidad viene de la nube, no del archivo: al volver a guardar esto
+    // sobrescribe ESTA cotizacion y no crea una suelta.
+    setTimeout(()=>{
+      currentCotizacionId=data.cotizacion_id||null;
+      if(data.client_uuid)currentClientUuid=data.client_uuid;
+      const b=document.getElementById('novaCargar'); if(b)b.remove();
+      setSyncStatus('Cotización #'+id+' abierta desde el sistema','#2E9AB3');
+    },700);
+  }catch(e){ alert('No se pudo abrir: '+(e&&e.message||e)); }
+}
+
+function lcPintar(){
+  const lista=$('lcLista'), est=$('lcEstado');
+  if(!lista||!_lcDatos)return;
+  let f=vzFiltrar(_lcDatos,{texto:($('lcBuscar')||{}).value,
+                            desde:($('lcDesde')||{}).value,
+                            hasta:($('lcHasta')||{}).value});
+  const autor=($('lcAutor')||{}).value;
+  if(autor)f=f.filter(r=>String(r.creado_por||'')===autor);
+
+  const ocultas=f.filter(r=>r.oculto).length;
+  est.style.color='#888';
+  est.textContent=f.length+' cotización(es)'+(ocultas?' · '+ocultas+' fuera de la vista de eventos':'');
+
+  if(!f.length){lista.innerHTML='<p style="font-size:11.5px;color:#888;margin:0">Nada con esos filtros.</p>';return;}
+
+  lista.innerHTML=f.map(r=>{
+    const g=r.oculto;
+    return '<div class="lcItem" data-id="'+r.id+'" data-oculto="'+(g?1:0)+'" '+
+      'data-abrir="'+(r.se_puede_abrir?1:0)+'" '+
+      'style="border:0.5px solid '+(g?'#e8e8e8':'#e2e6e8')+';border-radius:6px;padding:9px 11px;'+
+      'margin-bottom:6px;cursor:pointer;background:'+(g?'#f5f5f5':'#fff')+'">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px">'+
+        '<span style="font-weight:700;font-size:12px;color:'+(g?'#999':'#1a1a1a')+'">'+
+          (r.cliente||'Sin cliente')+'</span>'+
+        '<span style="font-size:11px;color:'+(g?'#aaa':'#2E9AB3')+'">'+vzFmtMoneda(r.total)+'</span></div>'+
+      '<div style="font-size:10.5px;color:'+(g?'#aaa':'#666')+';margin-top:3px">'+
+        vzFmtFecha(r.fecha_evento)+' · '+(VZ_ESTADO[r.estado]||r.estado)+
+        (r.autor?' · '+r.autor:'')+
+        (r.reemplazada_por?' · reemplazada':'')+
+      '</div>'+
+      (g?'<div style="text-align:right;margin-top:4px">'+
+          '<a href="#" class="lcDevolver" data-id="'+r.id+'" '+
+          'style="font-size:10px;color:#2E9AB3;text-decoration:none">↩ Devolver a la vista de eventos</a>'+
+        '</div>':'')+
+    '</div>';
+  }).join('');
+
+  lista.querySelectorAll('.lcItem').forEach(el=>{
+    el.onclick=ev=>{
+      if(ev.target.classList.contains('lcDevolver'))return;
+      abrirCotizacion(+el.dataset.id, el.dataset.abrir==='1');
+    };
+  });
+  lista.querySelectorAll('.lcDevolver').forEach(a=>{
+    a.onclick=async ev=>{
+      ev.preventDefault(); ev.stopPropagation();
+      a.textContent='...';
+      try{
+        const{error}=await getSb().rpc('ocultar_cotizacion',{p_id:+a.dataset.id,p_oculto:false});
+        if(error)throw error;
+        const r=_lcDatos.find(x=>x.id===+a.dataset.id); if(r)r.oculto=false;
+        lcPintar();
+      }catch(e){alert('No se pudo: '+(e&&e.message||e));lcPintar();}
+    };
+  });
+}
+
 // "Cargar cotizacion" busca en la nube. Si no hay sesion o no hay red, ofrece
 // el archivo, que es lo que hacia antes. No se pierde el camino viejo.
 async function loadQuote(){
@@ -1181,6 +1293,14 @@ async function loadQuote(){
       '<span style="font-size:15px;font-weight:700;color:#2E9AB3">Cargar cotización</span>'+
       '<button type="button" id="lcX" style="background:none;border:0;font-size:20px;cursor:pointer;color:#999">×</button>'+
     '</div>'+
+    '<div class="g2" style="margin-bottom:7px">'+
+      '<div><label>Buscar por cliente</label><input id="lcBuscar" placeholder="nombre"/></div>'+
+      '<div><label>Creada por</label><select id="lcAutor"><option value="">Cualquiera</option></select></div>'+
+    '</div>'+
+    '<div class="g2" style="margin-bottom:9px">'+
+      '<div><label>Desde</label><input id="lcDesde" type="date"/></div>'+
+      '<div><label>Hasta</label><input id="lcHasta" type="date"/></div>'+
+    '</div>'+
     '<div id="lcEstado" style="font-size:10.5px;color:#888;margin-bottom:10px"></div>'+
     '<div id="lcLista"></div>'+
     '<div style="border-top:0.5px solid #eee;margin-top:12px;padding-top:11px">'+
@@ -1192,6 +1312,10 @@ async function loadQuote(){
   d.onclick=e=>{if(e.target===d)d.remove();};
 
   const est=d.querySelector('#lcEstado'), lista=d.querySelector('#lcLista');
+  ['lcBuscar','lcDesde','lcHasta','lcAutor'].forEach(id=>{
+    const el=d.querySelector('#'+id); if(!el)return;
+    el.addEventListener(el.tagName==='SELECT'||el.type==='date'?'change':'input',lcPintar);
+  });
 
   if(!identidadCacheada()){
     est.textContent='';
@@ -1212,21 +1336,16 @@ async function loadQuote(){
     const{data,error}=await sb.from('v_cotizaciones').select('*').order('id',{ascending:false});
     if(error)throw error;
     if(!data.length){est.textContent='';lista.innerHTML='<p style="font-size:11.5px;color:#888;margin:0">No hay cotizaciones guardadas todavía.</p>';return;}
-    est.textContent=data.length+' cotización(es)';
-    lista.innerHTML=data.map(r=>
-      '<div class="lcItem" data-id="'+r.id+'" style="border:0.5px solid #e2e6e8;border-radius:6px;'+
-        'padding:9px 11px;margin-bottom:6px;cursor:pointer">'+
-        '<div style="display:flex;justify-content:space-between;gap:8px">'+
-          '<span style="font-weight:700;font-size:12px">'+(r.cliente||'Sin cliente')+'</span>'+
-          '<span style="font-size:11px;color:#2E9AB3">'+vzFmtMoneda(r.total)+'</span></div>'+
-        '<div style="font-size:10.5px;color:#666;margin-top:3px">'+vzFmtFecha(r.fecha_evento)+
-          ' · '+(VZ_ESTADO[r.estado]||r.estado)+'</div>'+
-      '</div>').join('');
-    lista.querySelectorAll('.lcItem').forEach(el=>{
-      el.onclick=()=>alert('Traer la cotización #'+el.dataset.id+' al formulario todavía no está construido.\n\n'+
-        'La lista ya lee del sistema; falta reconstruir el formulario a partir de las líneas guardadas, '+
-        'que es más delicado porque toca el motor de precios.');
-    });
+    // Los autores salen de lo que ya se trajo: no hace falta otra consulta.
+    const sel=d.querySelector('#lcAutor');
+    if(sel){
+      const vistos=new Map();
+      data.forEach(r=>{if(r.creado_por&&r.autor)vistos.set(String(r.creado_por),r.autor);});
+      [...vistos].sort((a,b)=>a[1].localeCompare(b[1]))
+        .forEach(([id,nom])=>{const o=document.createElement('option');o.value=id;o.textContent=nom;sel.appendChild(o);});
+    }
+    _lcDatos=data;
+    lcPintar();
   }catch(e){
     est.style.color='#C0392B';
     est.textContent='No se pudo consultar: '+(e&&e.message||e);
@@ -2050,8 +2169,12 @@ async function exportPDF(){
       }
     }
     pdf.save(getFilename()+'.pdf');
-    // Auto-guardar JSON junto con el PDF para poder reabrir y editar después
-    setTimeout(()=>saveQuote(),400);
+    // Antes esto disparaba saveQuote() para dejar el .json al lado del PDF y
+    // poder reabrir la cotizacion. Ya no hace falta: el estado del formulario
+    // se guarda en la nube (estado_app) y se reabre desde "Cargar cotizacion".
+    // Ademas la descarga automatica llenaba la app Archivos del iPhone de .json
+    // que nadie vuelve a abrir. El boton "Guardar cotizacion" sigue ahi para
+    // quien quiera el archivo a proposito.
   }catch(err){
     if(origLogoSrc&&logoImg)logoImg.src=origLogoSrc;
     _restaurarAncho();
@@ -2481,12 +2604,50 @@ function vzFmtFecha(f){
 const VZ_ESTADO={negociacion:'🟡 Negociación',confirmada:'🟢 Confirmada',
                  llamado_equipos:'🔵 Llamado de equipos',cancelado:'🔴 Cancelado'};
 
+// Filtro compartido por el visualizador y por "Cargar cotización", para que la
+// regla de busqueda viva en un solo sitio y no se desincronicen.
+function vzFiltrar(filas,{texto,desde,hasta}={}){
+  let f=filas.slice();
+  if(texto&&texto.trim()){
+    // Sin acentos y sin mayusculas: buscar "cortes" debe encontrar "Cortés".
+    const norm=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+    const q=norm(texto.trim());
+    f=f.filter(r=>norm(r.cliente).includes(q));
+  }
+  // Las sin fecha se conservan solo cuando no hay filtro de fechas: si el
+  // usuario acota un rango, esta preguntando por fechas y las que no tienen
+  // no son respuesta.
+  if(desde)f=f.filter(r=>r.fecha_evento&&r.fecha_evento>=desde);
+  if(hasta)f=f.filter(r=>r.fecha_evento&&r.fecha_evento<=hasta);
+  return f;
+}
+
 function vzPintar(filas,desdeCache,fechaCache){
+  _vzUltimas=filas; _vzDesdeCache=desdeCache; _vzUltimaFecha=fechaCache;
   const cont=$('vzLista'), est=$('vzEstado');
   const filtro=$('vzFiltro').value;
-  let f=filas.slice();
+  let f=vzFiltrar(filas,{texto:($('vzBuscar')||{}).value,
+                         desde:($('vzDesde')||{}).value,
+                         hasta:($('vzHasta')||{}).value});
+  const autor=($('vzAutor')||{}).value;
+  if(autor)f=f.filter(r=>String(r.creado_por||'')===autor);
   if(filtro==='confirmados')f=f.filter(r=>r.confirmado);
   if(filtro==='porconfirmar')f=f.filter(r=>!r.confirmado);
+
+  // Los autores se sacan de lo que ya llego, sin consulta aparte, y se
+  // conserva lo que el usuario tuviera elegido.
+  const sel=$('vzAutor');
+  if(sel){
+    const vistos=new Map();
+    filas.forEach(r=>{if(r.creado_por&&r.autor)vistos.set(String(r.creado_por),r.autor);});
+    const prev=sel.value;
+    if(sel.options.length-1!==vistos.size){
+      sel.innerHTML='<option value="">Cualquiera</option>';
+      [...vistos].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([id,nom])=>{
+        const o=document.createElement('option');o.value=id;o.textContent=nom;sel.appendChild(o);});
+      sel.value=prev;
+    }
+  }
 
   // Sin fecha primero, después por fecha ascendente. Lo que no tiene fecha es
   // lo que está en negociación temprana: es lo que hay que empujar.
@@ -2522,10 +2683,9 @@ function vzPintar(filas,desdeCache,fechaCache){
       '</div>'+
       (r.incluye_precios===false?'<div style="font-size:9.5px;color:#aaa;margin-top:2px">Sin permiso para ver montos</div>':'')+
       '<div style="text-align:right;margin-top:5px">'+
-        '<a href="#" class="vzQuitar" data-id="'+r.id+'" data-oculto="'+(r.oculto?1:0)+'" '+
+        '<a href="#" class="vzQuitar" data-id="'+r.id+'" '+
           'data-cliente="'+(r.cliente||'').replace(/"/g,'&quot;')+'" '+
-          'style="font-size:10px;color:'+(r.oculto?'#2E9AB3':'#c0392b')+';text-decoration:none">'+
-          (r.oculto?'↩ Devolver al visualizador':'✕ Quitar del visualizador')+'</a>'+
+          'style="font-size:10px;color:#c0392b;text-decoration:none">✕ Quitar de la vista</a>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -2533,13 +2693,14 @@ function vzPintar(filas,desdeCache,fechaCache){
   cont.querySelectorAll('.vzQuitar').forEach(a=>{
     a.onclick=async ev=>{
       ev.preventDefault();
-      const id=+a.dataset.id, ocultar=a.dataset.oculto!=='1';
-      if(ocultar&&!confirm('Quitar "'+a.dataset.cliente+'" del visualizador?\n\n'+
-        'No se borra: queda guardada y la puedes devolver desde el listado "Ocultas".'))return;
+      const id=+a.dataset.id, sb=getSb();
+      // No borra: oculta. Sigue estando en "Cargar cotización", en gris.
+      if(!confirm('Quitar "'+a.dataset.cliente+'" de esta vista?\n\n'+
+        'No se borra. Sigue apareciendo en "Cargar cotización", marcada en gris, '+
+        'y la puedes seguir abriendo.'))return;
       a.textContent='...';
       try{
-        const sb=getSb();
-        const{error}=await sb.rpc('ocultar_cotizacion',{p_id:id,p_oculto:ocultar});
+        const{error}=await sb.rpc('ocultar_cotizacion',{p_id:id,p_oculto:true});
         if(error)throw error;
         await cargarVisualizador(true);
       }catch(e){
@@ -2549,6 +2710,12 @@ function vzPintar(filas,desdeCache,fechaCache){
     };
   });
 }
+
+// Repinta con lo que ya se trajo, sin volver a consultar: buscar mientras se
+// escribe no debe pegarle a la red en cada tecla, y asi tambien funciona
+// escribiendo sin señal sobre lo cacheado.
+let _vzUltimas=null, _vzUltimaFecha=null, _vzDesdeCache=false;
+function vzRepintar(){ if(_vzUltimas)vzPintar(_vzUltimas,_vzDesdeCache,_vzUltimaFecha); }
 
 async function cargarVisualizador(forzar){
   const est=$('vzEstado'), cont=$('vzLista');
@@ -2703,12 +2870,22 @@ const PERS_AREA_NIVEL={
 
 function buildSupabasePayload(){
   rooms[activeRoom].data=roomCapture();
-  let{numDias}=getDayInfo();
+  let{numDias,pctDia,showDias}=getDayInfo();
+  // OJO con los totales. `total` de buildRowsFromData es SOLO las filas de
+  // categoria e item; deja fuera los adicionales (catitem), los dias extra, el
+  // descuento, el IVA y el transporte. Guardar ese numero como el total de la
+  // cotizacion la subvalora: medido en una real, 20.735.000 guardados contra
+  // 29.068.450 reales. El gran total se arma igual que en _doExcel, que es el
+  // que el cliente ve impreso.
   let items=[],currentCat=null,totalGeneral=0;
+  let todasLasFilas=[],addlTotal=0,transpTotal=0;
   rooms.forEach(room=>{
     if(!room.data)return;
-    let{rows,total}=buildRowsFromData(room.data,numDias);
-    totalGeneral+=total;
+    let{rows,total,addlTotal:aT,transpTotal:tT}=buildRowsFromData(room.data,numDias);
+    totalGeneral+=total; addlTotal+=(aT||0); transpTotal+=(tT||0);
+    let rZD=room.data.zoneDays, rED=rZD?Math.max(0,rZD.length-1):numDias-1;
+    rows.forEach(r=>{if(r.extraDays===undefined&&r.sub!==undefined&&!r.noDay)r.extraDays=rED;});
+    todasLasFilas.push(...rows);
     let sonidoCabinas=null;
     if(room.data.secOn&&room.data.secOn.sn&&room.data.snItems&&room.data.snItems[0]){
       sonidoCabinas=parseInt(room.data.snItems[0].q)||null;
@@ -2741,12 +2918,50 @@ function buildSupabasePayload(){
     personal.push({area_nombre:map[0],nivel:map[1],cantidad:q,notas:p.n});
   });
 
+  // Dias adicionales, repartidos igual que en _doExcel: los `catitem` van al
+  // balde de adicionales, el resto al base.
+  let extraDia=0,extraAddl=0;
+  if(showDias){
+    todasLasFilas.forEach(r=>{
+      if(r.sub===undefined||r.noDay||r.opcional)return;
+      let eff=(r.pct!=null?r.pct:pctDia);
+      let xd=(r.extraDays!=null?r.extraDays:numDias-1);
+      let ex=Math.round(r.sub*eff/100)*xd;
+      if(r.t==='catitem')extraAddl+=ex;else extraDia+=ex;
+    });
+  }
+  let base=(totalGeneral+extraDia)+(addlTotal+extraAddl);
+  let desc=0;
+  if(typeof descOn!=='undefined'&&descOn){
+    let a=parseFloat(($('descAmt')||{}).value)||0;
+    desc=descPct?Math.round(base*a/100):Math.round(a);
+  }
+  let sub_=base-desc;
+  let iva=(typeof ivaOn!=='undefined'&&ivaOn)?Math.round(sub_*0.19):0;
+  let granTotal=sub_+iva+transpTotal;
+
+  // El estado del formulario viaja con la cotizacion. Es EXACTAMENTE lo que
+  // escribe saveQuote() en el .json, para que reabrir desde la nube use el
+  // mismo camino que reabrir un archivo y no haya dos implementaciones.
+  let estadoApp=null;
+  try{
+    let g={};
+    GLOBAL_IDS.forEach(id=>{let el=$(id);if(el)g[id]=el.value;});
+    estadoApp={version:2,savedAt:new Date().toISOString(),
+               client_uuid:ensureClientUuid(),
+               global:g,rooms:rooms.map(r=>({name:r.name,data:r.data})),activeRoom};
+  }catch(e){}
+
   return{
     client_uuid:ensureClientUuid(),
     cotizacion_id:currentCotizacionId||undefined,
+    estado_app:estadoApp,
     cliente:$('cli').value.trim()||'Cliente',
     fecha_evento:$('fecha').value||null,
-    subtotal:totalGeneral,total:totalGeneral,
+    subtotal:sub_,                    // ya con descuento, antes de IVA
+    iva:iva,
+    transporte_montaje:transpTotal,
+    total:granTotal,                  // lo que el cliente ve impreso
     items,personal,
   };
 }
