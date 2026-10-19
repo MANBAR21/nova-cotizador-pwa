@@ -174,8 +174,10 @@ tr.sp td{height:4px;background:#fafafa}
 tr.ftr td{padding:4px 8px;font-size:10.5px}
 tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-weight:700}
 .qnota{font-size:9px;color:#888;font-style:italic;padding:6px 10px;border-top:0.5px solid #eee}
+/* margin:0 hace que el navegador NO imprima su encabezado/pie (URL, fecha, titulo) */
+@page{size:A4;margin:0}
 @media print{
-  body{padding:0;max-width:100%;background:white}
+  body{padding:10mm;max-width:100%;background:white}
   .card,.tabs,#roomTabs,.btn,.btn2,.add-btn,.del-btn,.export-bar,.save-bar,h1,.subtitle{display:none!important}
   .quote{display:block!important;box-shadow:none;border:none;margin:0}
   .qbar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -242,6 +244,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
     <div><label>E-mail</label><input id="email" placeholder="cliente@email.com"/></div>
     <div><label>Días del evento</label><input type="number" id="numDias" value="1" min="1" max="30" oninput="onNumDiasChange()"/></div>
     <div id="pctDiaField" style="display:none"><label>% cobro por día adicional</label><input type="number" id="pctDiaAdicional" value="60" min="0" max="100" oninput="onNumDiasChange()"/></div>
+    <div id="colUnitField" style="display:none"><label>Columna «Costo / unidad»</label><select id="colUnit"><option value="0">No mostrar</option><option value="1">Mostrar</option></select></div>
   </div>
   <p id="numDiasNote" style="font-size:9.5px;color:#777;margin-top:6px;display:none">La cotización agrega una columna con el valor de cada día adicional (equipos y servicios) al porcentaje indicado. Transporte y personal técnico se cobran aparte, no por día.</p>
 </div>
@@ -320,7 +323,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 <!-- OTROS SERVICIOS -->
 <div class="card">
   <div class="sec-label">Otros servicios</div>
-  <div class="srv" id="sLED" onclick="togSrv('LED')"><div class="srv-head"><div class="srv-check" id="ckLED"></div><div class="srv-info"><div class="srv-name">🖥️ Pantallas LED</div><div class="srv-desc" id="ledDesc">Ingresa las dimensiones</div></div><div class="srv-price" id="prLED">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-size:10px;color:#555">Ingresar por:</span><div class="t2" onclick="togLedMode();event.stopPropagation()"><span id="ledModeDim" class="on">Dimensiones</span><span id="ledModeM2">m² directo</span></div></div><div id="ledDimGroup" class="g3" style="margin-bottom:7px"><div><label>Ancho (m)</label><input type="number" id="ledAncho" value="5" step="0.5" min="0" oninput="recalcLED()"/></div><div><label>Alto (m)</label><input type="number" id="ledAlto" value="3" step="0.5" min="0" oninput="recalcLED()"/></div><div><label>m² (auto)</label><input id="ledM2disp" readonly style="background:#f5f5f5"/></div></div><div id="ledM2Group" style="display:none;margin-bottom:7px"><div class="g3"><div><label>m² total</label><input type="number" id="ledM2direct" value="15" step="0.5" min="0" oninput="recalcLED()"/></div><div></div><div></div></div></div><div class="g3" style="margin-bottom:7px"><div><label>Tipo de panel</label><select id="ledTipo" onchange="onLedTipo()" onclick="event.stopPropagation()"><option value="350000">Panel LED Interior</option><option value="300000">Panel LED Exterior</option></select></div><div><label>$/m² (editable)</label><input type="number" id="ledPxm2" value="350000" oninput="recalcLED()"/></div><div><label>Precio total</label><input id="ledTotal" readonly style="background:#f5f5f5"/></div></div><div class="price-override" style="margin-bottom:5px"><label>% día adicional (opcional):</label><input type="number" id="pctLED" placeholder="usa % global" min="0" max="100"/></div><div id="extraLedList" style="margin-bottom:5px"></div><button class="add-btn" onclick="addExtraLed();event.stopPropagation()" style="margin-bottom:6px">+ Agregar otra pantalla LED</button><div class="sep" style="margin-top:6px;margin-bottom:6px"></div><div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px">Adicionales (TVs, atriles, proyectores)</div><div id="extraVideoList" style="margin-bottom:4px"></div><button class="add-btn" onclick="addExtraVideo();event.stopPropagation()" style="margin-bottom:6px">+ Agregar TV / atril / proyector</button><div class="sub-eq">Incluido: Video Procesador VDwall 605 HD · Servidor manejo de contenido · Parales antivibración · Cableado HD-SDI · VJ · Técnico de video</div></div></div>
+  <div class="srv" id="sLED" onclick="togSrv('LED')"><div class="srv-head"><div class="srv-check" id="ckLED"></div><div class="srv-info"><div class="srv-name">🖥️ Pantallas LED</div><div class="srv-desc" id="ledDesc">Ingresa las dimensiones</div></div><div class="srv-price" id="prLED">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-size:10px;color:#555">Ingresar por:</span><div class="t2" onclick="togLedMode();event.stopPropagation()"><span id="ledModeDim" class="on">Dimensiones</span><span id="ledModeM2">m² directo</span></div></div><div id="ledDimGroup" class="g3" style="margin-bottom:7px"><div><label>Ancho (m)</label><input type="number" id="ledAncho" value="5" step="0.5" min="0" oninput="recalcLED()"/></div><div><label>Alto (m)</label><input type="number" id="ledAlto" value="3" step="0.5" min="0" oninput="recalcLED()"/></div><div><label>m² (auto)</label><input id="ledM2disp" readonly style="background:#f5f5f5"/></div></div><div id="ledM2Group" style="display:none;margin-bottom:7px"><div class="g3"><div><label>m² total</label><input type="number" id="ledM2direct" value="15" step="0.5" min="0" oninput="recalcLED()"/></div><div></div><div></div></div></div><div class="g3" style="margin-bottom:7px"><div><label>Tipo de panel</label><select id="ledTipo" onchange="onLedTipo()" onclick="event.stopPropagation()"><option value="350000">Panel LED Interior</option><option value="300000">Panel LED Exterior</option></select></div><div><label>$/m² (editable)</label><input type="number" id="ledPxm2" value="350000" oninput="recalcLED()"/></div><div><label>Precio total</label><input id="ledTotal" readonly style="background:#f5f5f5"/></div></div><div class="price-override" style="margin-bottom:5px"><label>% día adicional (opcional):</label><input type="number" id="pctLED" placeholder="usa % global" min="0" max="100"/></div><div id="extraLedList" style="margin-bottom:5px"></div><button class="add-btn" onclick="addExtraLed();event.stopPropagation()" style="margin-bottom:6px">+ Agregar otra pantalla LED</button><div class="sep" style="margin-top:6px;margin-bottom:6px"></div><div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px">Adicionales (TVs, atriles, proyectores)</div><div id="extraVideoList" style="margin-bottom:4px"></div><button class="add-btn" onclick="addExtraVideo();event.stopPropagation()" style="margin-bottom:6px">+ Agregar TV / atril / proyector</button><div class="sub-eq">Incluido: Procesador Novastar VX1000 Pro · Servidor manejo de contenido · Parales antivibración · Cableado HD-SDI · VJ · Técnico de video</div></div></div>
   <div class="srv" id="sStruct" onclick="togSrv('Struct')"><div class="srv-head"><div class="srv-check" id="ckStruct"></div><div class="srv-info"><div class="srv-name">🏗️ Estructura / Truss</div><div class="srv-desc">Selecciona las piezas de truss</div></div><div class="srv-price" id="prStruct">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div id="structItemList" style="margin-bottom:5px"></div><button class="add-btn" onclick="addStructItem();event.stopPropagation()" style="margin-bottom:7px">+ Agregar pieza de truss / ítem</button><div class="srv-price-edit"><label>Precio total calculado:</label><input id="structTotal" readonly style="background:#f5f5f5"/></div><div class="srv-price-edit"><label>Sobrescribir precio total ($):</label><input type="number" id="structPrecio" placeholder="vacío = suma de ítems" oninput="recalcStruct()"/></div><div class="srv-price-edit"><label>% día adicional (opcional):</label><input type="number" id="pctStruct" placeholder="usa % global" min="0" max="100"/></div></div></div>
   <div class="srv" id="sTarima" onclick="togSrv('Tarima')"><div class="srv-head"><div class="srv-check" id="ckTarima"></div><div class="srv-info"><div class="srv-name">🎭 Tarima</div><div class="srv-desc" id="tarDesc">$80.000/m² charolina · $60.000/m² pintada</div></div><div class="srv-price" id="prTarima">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div class="g3" style="margin-bottom:7px"><div><label>Ancho (m)</label><input type="number" id="tarAncho" value="6" step="0.5" min="0" oninput="recalcTarima()"/></div><div><label>Largo (m)</label><input type="number" id="tarLargo" value="3" step="0.5" min="0" oninput="recalcTarima()"/></div><div><label>m² (auto)</label><input id="tarM2disp" readonly style="background:#f5f5f5"/></div></div><div class="g3" style="margin-bottom:7px"><div><label>Acabado</label><select id="tarTipo" onchange="recalcTarima()"><option value="80">Charolina ($80k/m²)</option><option value="60">Pintada ($60k/m²)</option></select></div><div><label>$/m²</label><input type="number" id="tarPxm2" value="80000" oninput="recalcTarima()"/></div><div><label>Precio total</label><input id="tarTotal" readonly style="background:#f5f5f5"/></div></div><div class="srv-price-edit"><label>% día adicional (opcional):</label><input type="number" id="pctTar" placeholder="usa % global" min="0" max="100"/></div><div id="extraTarList" style="margin-top:6px"></div><button class="add-btn" onclick="addExtraTar();event.stopPropagation()">+ Agregar otra tarima</button></div></div>
   <div class="srv" id="sPista" onclick="togSrv('Pista')"><div class="srv-head"><div class="srv-check" id="ckPista"></div><div class="srv-info"><div class="srv-name">💃 Pista de baile</div><div class="srv-desc" id="pistaDesc">Ingresa las medidas</div></div><div class="srv-price" id="prPista">—</div></div><div class="srv-expand" onclick="event.stopPropagation()">
@@ -713,7 +716,7 @@ const FULL_INVENTORY=[
   {cat:'Video',items:[
     {n:'m² Pantalla LED Absen NT 130 (interior)',p:350000},
     {n:'m² Pantalla LED Absen NT 24 (exterior)',p:0},
-    {n:'Video Procesador VDwall 605 HD',p:0},
+    {n:'Procesador Novastar VX1000 Pro',p:0},
     {n:'Switcher Black Magic ATEM TV Pro HD',p:0},
     {n:'Monitor Multiview 21"',p:0},
     {n:'Huddle Cam Controller',p:0},
@@ -824,7 +827,7 @@ const PERS=[
 ];
 
 // ROOM STATE
-const GLOBAL_IDS=['cli','venue','fecha','tipo','otroTipo','tel','email','numDias','pctDiaAdicional'];
+const GLOBAL_IDS=['cli','venue','fecha','tipo','otroTipo','tel','email','numDias','pctDiaAdicional','colUnit'];
 let rooms=[{name:'Salón Principal',data:null}], activeRoom=0;
 
 // ── HELPERS ──────────────────────────────────────────
@@ -904,7 +907,7 @@ function recalcLED(){
   let pxm2=parseInt($('ledPxm2').value)||350000,v=m2*pxm2;
   let tot=v;
   extraLedItems.forEach(id=>{let el=$(id);if(!el||el.querySelector('.xtled-opt')?.checked)return;let a=parseFloat(el.querySelector('.xtled-an').value)||0,b=parseFloat(el.querySelector('.xtled-al').value)||0,p=parseInt(el.querySelector('.xtled-pxm2').value)||0;tot+=(a*b)*p;});
-  extraVideoItems.forEach(id=>{let el=$(id);if(!el||el.querySelector('.xtvid-opt')?.checked)return;tot+=(parseInt(el.querySelector('.xtvid-q')?.value)||1)*(parseInt(el.querySelector('.xtvid-p')?.value)||0);});
+  extraVideoItems.forEach(id=>{let el=$(id);if(!el||!el.classList.contains('on')||el.querySelector('.xtvid-opt')?.checked)return;tot+=(parseInt(el.querySelector('.xtvid-q')?.value)||1)*(parseInt(el.querySelector('.xtvid-p')?.value)||0);});
   if($('ledTotal'))$('ledTotal').value=fmt(tot);
   if($('ledDesc'))$('ledDesc').textContent=dimStr?(dimStr+' · $'+fmtN(tot)):'Ingresa las dimensiones';
   $('prLED').textContent=srvOn.LED?fmt(tot):'—';
@@ -976,7 +979,7 @@ function roomCapture(){
   SYS[selSysId].items.forEach((_,i)=>{let el=$('snI'+i),q=$('snQ'+i);d.snItems.push({on:el?el.classList.contains('on'):true,q:q?q.value:'0'});});
   d.customLz=customLzItems.map(id=>{let el=$(id);if(!el)return null;return{on:el.classList.contains('on'),n:el.querySelector('.lzn').value,q:el.querySelector('.lzq').value,p:el.querySelector('.lzp').value,opt:el.querySelector('.lz-opt')?.checked||false};}).filter(Boolean);
   d.customEsc=customEscItems.map(id=>{let el=$(id);if(!el)return null;return{on:el.classList.contains('on'),n:el.querySelector('.lzn').value,q:el.querySelector('.lzq').value,p:el.querySelector('.lzp').value,opt:el.querySelector('.lz-opt')?.checked||false};}).filter(Boolean);
-  d.extras=extraItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.exn').value,q:el.querySelector('.exq').value,p:el.querySelector('.exp').value,cort:el.querySelector('.excort')?.checked||false,opt:el.querySelector('.exopt')?.checked||false,dias:el.querySelector('.exdias')?.value||'1'};}).filter(Boolean);
+  d.extras=extraItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.exn').value,q:el.querySelector('.exq').value,p:el.querySelector('.exp').value,cort:el.querySelector('.excort')?.checked||false,opt:el.querySelector('.exopt')?.checked||false,dias:el.querySelector('.exdias')?.value||'',dpct:el.querySelector('.exdpct')?.value||''};}).filter(Boolean);
   d.zoneName=$('zoneName')?$('zoneName').value:'';
   d.snExtras=snExtraItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.snex-n').value,q:el.querySelector('.snex-q')?.value||'1',p:el.querySelector('.snex-p')?.value||'',opt:el.querySelector('.snex-opt')?.checked||false};}).filter(Boolean);
   d.extraSnSystems=extraSnSystems.map(id=>{let el=$(id);if(!el)return null;return{label:el.querySelector('.snsy-label').value,sys:el.querySelector('.snsy-sys').value,price:el.querySelector('.snsy-price').value,opt:el.querySelector('.snsy-opt')?.checked||false,items:Array.from(el.querySelectorAll('.snsy-items label')).map(l=>({on:l.querySelector('.snsy-i').checked,q:l.querySelector('.snsy-iq').value}))};}).filter(Boolean);
@@ -988,7 +991,7 @@ function roomCapture(){
   d.extraEfectos=extraEfectosItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.xtef-n').value,q:el.querySelector('.xtef-q')?.value||'1',p:el.querySelector('.xtef-p')?.value||'0',d:el.querySelector('.xtef-d')?.value||'1',opt:el.querySelector('.xtef-opt')?.checked||false};}).filter(Boolean);
   d.extraDJ=extraDJItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.xtdj-n').value,q:el.querySelector('.xtdj-q')?.value||'1',p:el.querySelector('.xtdj-p')?.value||'0',d:el.querySelector('.xtdj-d')?.value||'1',opt:el.querySelector('.xtdj-opt')?.checked||false};}).filter(Boolean);
   d.ledInputMode=ledInputMode;
-  d.extraVideo=extraVideoItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.xtvid-n').value,q:el.querySelector('.xtvid-q')?.value||'1',p:el.querySelector('.xtvid-p')?.value||'0',opt:el.querySelector('.xtvid-opt')?.checked||false};}).filter(Boolean);
+  d.extraVideo=extraVideoItems.map(id=>{let el=$(id);if(!el)return null;return{on:el.classList.contains('on'),n:el.querySelector('.xtvid-n').value,q:el.querySelector('.xtvid-q')?.value||'1',p:el.querySelector('.xtvid-p')?.value||'0',opt:el.querySelector('.xtvid-opt')?.checked||false};}).filter(Boolean);
   // Save built-in opcional states
   d.builtinOpcs={};BUILTIN_OPC_IDS.forEach(id=>{if(getBuiltinOpc(id))d.builtinOpcs[id]=true;});
   d.srvOpcs={};[...SRV_OPC_KEYS,'sn','lz'].forEach(key=>{if(getSrvOpc(key))d.srvOpcs[key]=true;});
@@ -1040,7 +1043,7 @@ function roomRestore(d){
   $('customEscList').innerHTML='';customEscItems=[];escLzId=0;
   (d.customEsc||[]).forEach(item=>{addCustomEsc();let id=customEscItems[customEscItems.length-1],el=$(id);if(!el)return;el.querySelector('.lzn').value=item.n;el.querySelector('.lzq').value=item.q;el.querySelector('.lzp').value=item.p;if(item.on!==el.classList.contains('on'))togCl(el);let of=el.querySelector('.lz-opt');if(of&&item.opt)of.checked=true;});
   $('extraList').innerHTML='';extraItems=[];exId=0;
-  (d.extras||[]).forEach(item=>{addExtra();let id=extraItems[extraItems.length-1],el=$(id);if(!el)return;el.querySelector('.exn').value=item.n;el.querySelector('.exq').value=item.q;el.querySelector('.exp').value=item.p;let cf=el.querySelector('.excort');if(cf&&item.cort)cf.checked=true;let of=el.querySelector('.exopt');if(of&&item.opt)of.checked=true;let df=el.querySelector('.exdias');if(df)df.value=item.dias||item.pct||'1';});
+  (d.extras||[]).forEach(item=>{addExtra();let id=extraItems[extraItems.length-1],el=$(id);if(!el)return;el.querySelector('.exn').value=item.n;el.querySelector('.exq').value=item.q;el.querySelector('.exp').value=item.p;let cf=el.querySelector('.excort');if(cf&&item.cort)cf.checked=true;let of=el.querySelector('.exopt');if(of&&item.opt)of.checked=true;let df=el.querySelector('.exdias');if(df)df.value=item.dias||item.pct||'';let dp=el.querySelector('.exdpct');if(dp)dp.value=item.dpct||'';});
   if($('zoneName'))$('zoneName').value=d.zoneName||'';
   $('zoneNameCard').style.display=activeRoom>0?'block':'none';
   // Restore new multi-unit fields
@@ -1068,7 +1071,7 @@ function roomRestore(d){
   (d.extraDJ||[]).forEach(it=>{addExtraDJ();let id=extraDJItems[extraDJItems.length-1],el=$(id);if(!el)return;el.querySelector('.xtdj-n').value=it.n||'';let qf=el.querySelector('.xtdj-q');if(qf)qf.value=it.q||'1';let pf=el.querySelector('.xtdj-p');if(pf)pf.value=it.p||'0';let df=el.querySelector('.xtdj-d');if(df)df.value=it.d||'1';let of=el.querySelector('.xtdj-opt');if(of&&it.opt)of.checked=true;});
   let wantedLedMode=d.ledInputMode||'dim';if(wantedLedMode!==ledInputMode)togLedMode();
   $('extraVideoList').innerHTML='';extraVideoItems=[];videoItemId=0;
-  (d.extraVideo||[]).forEach(it=>{addExtraVideo();let id=extraVideoItems[extraVideoItems.length-1],el=$(id);if(!el)return;el.querySelector('.xtvid-n').value=it.n||'';let qf=el.querySelector('.xtvid-q');if(qf)qf.value=it.q||'1';let pf=el.querySelector('.xtvid-p');if(pf)pf.value=it.p||'0';let of=el.querySelector('.xtvid-opt');if(of&&it.opt)of.checked=true;});
+  (d.extraVideo||[]).forEach(it=>{addExtraVideo();let id=extraVideoItems[extraVideoItems.length-1],el=$(id);if(!el)return;el.querySelector('.xtvid-n').value=it.n||'';let qf=el.querySelector('.xtvid-q');if(qf)qf.value=it.q||'1';let pf=el.querySelector('.xtvid-p');if(pf)pf.value=it.p||'0';let of=el.querySelector('.xtvid-opt');if(of&&it.opt)of.checked=true;if(it.on===false&&el.classList.contains('on'))togCl(el);});
   // Restore day selectors
   let{numDias,showDias}=getDayInfo();
   let allDays=Array.from({length:numDias},(_,i)=>i+1);
@@ -1367,6 +1370,7 @@ function onLoadFile(e){
       rooms=state.rooms.map(r=>({name:r.name,data:r.data||null}));
       activeRoom=Math.min(state.activeRoom||0,rooms.length-1);
       // Restore global fields first
+      if($('colUnit'))$('colUnit').value='0';
       if(state.global)Object.entries(state.global).forEach(([id,v])=>{let el=$(id);if(el)el.value=v;});
       roomRestore(rooms[activeRoom].data);
       renderRoomTabs();
@@ -1459,16 +1463,16 @@ function buildRowsFromData(d,globalNumDias){
     let pxm2=parseInt(v('ledPxm2'))||350000,val=m2*pxm2;
     let totLed=val;
     (d.extraLed||[]).forEach(it=>{if(!(ledopc||it.opt)){let a=parseFloat(it.an)||parseFloat(it.m2)||0,b=parseFloat(it.al)||1;totLed+=a*b*(parseInt(it.pxm2)||0);}});
-    let vidOpcRows2=[];(d.extraVideo||[]).forEach(it=>{if(!it.n)return;let q=parseInt(it.q)||1,p=parseInt(it.p)||0;if(!p)return;let xs=q*p;if(ledopc||it.opt)vidOpcRows2.push({t:'row',desc:it.n,qty:q,unit:p,sub:xs,opcional:true});else totLed+=xs;});
-    if(!ledopc)total+=totLed;rows.push({t:'cat',desc:'Video / Pantallas LED',sub:totLed,pct:catPct('pctLED'),opcional:ledopc||undefined});
+    let vidOpcRows2=[],vidListRows=[],vidXtot=0;(d.extraVideo||[]).forEach(it=>{if(!it.n||it.on===false)return;let q=parseInt(it.q)||1,p=parseInt(it.p)||0,xs=q*p;if(ledopc||it.opt){if(p)vidOpcRows2.push({t:'row',desc:it.n,qty:q,unit:p,sub:xs,opcional:true});return;}if(p){vidXtot+=xs;vidListRows.push({t:'row',desc:it.n,qty:q,unit:p,sub:xs,pct:catPct('pctLED')});}else vidListRows.push({t:'sub',desc:'▸ '+it.n+' ×'+q});});
+    if(!ledopc)total+=totLed+vidXtot;rows.push({t:'cat',desc:'Video / Pantallas LED',sub:totLed,pct:catPct('pctLED'),opcional:ledopc||undefined});
     if(dimStr)rows.push({t:'sub',desc:'▸ '+tipoLabel+' '+dimStr});
     (d.extraLed||[]).forEach(it=>{
       let a=parseFloat(it.an)||parseFloat(it.m2)||0,b=parseFloat(it.al)||1,mm2=parseFloat((a*b).toFixed(2));
       let lbl=parseInt(it.tipo)>=350000?'Panel LED Interior':'Panel LED Exterior';
       if(mm2){if(ledopc||it.opt)rows.push({t:'row',desc:'(Opcional) '+lbl+' '+a+'×'+b+'m ('+mm2+' m²)',qty:mm2,qtyUnit:'m²',unit:parseInt(it.pxm2)||350000,sub:mm2*(parseInt(it.pxm2)||350000),opcional:true});else rows.push({t:'sub',desc:'▸ '+lbl+' '+a+'×'+b+'m ('+mm2+' m²)'});}
     });
-    vidOpcRows2.forEach(r=>rows.push(r));
-    ['Video Procesador VDwall 605 HD','Switcher Black Magic ATEM TV Pro HD','Servidor manejo de contenido','VJ manejo de contenido · Técnico de video'].forEach(e=>rows.push({t:'sub',desc:'▸ '+e}));
+    vidListRows.forEach(r=>rows.push(r));vidOpcRows2.forEach(r=>rows.push(r));
+    ['Procesador Novastar VX1000 Pro','Switcher Black Magic ATEM TV Pro HD','Servidor manejo de contenido','VJ manejo de contenido · Técnico de video'].forEach(e=>rows.push({t:'sub',desc:'▸ '+e}));
   }
   if(SRV.Struct){
     let structItms=d.structItems||[];
@@ -1476,20 +1480,20 @@ function buildRowsFromData(d,globalNumDias){
     let totStruct=0,structRowsData=[],structOpcRows=[];
     structItms.forEach(it=>{let q=parseInt(it.qty)||0,p=parseInt(it.price)||0;if(it.name&&q&&p){if(stropc||it.opt){structOpcRows.push({name:'(Opcional) '+it.name,qty:q,unit:p,sub:q*p});}else{totStruct+=q*p;structRowsData.push({name:it.name,qty:q,unit:p,sub:q*p});}}});
     let ov=parseInt(v('structPrecio'))||0,val=ov||totStruct;
-    if(val||structOpcRows.length){if(val&&!stropc)total+=val;rows.push({t:'cat',desc:'Estructura',sub:val||undefined,pct:catPct('pctStruct'),opcional:stropc||undefined});structRowsData.forEach(r=>rows.push({t:'subq',desc:r.name,qty:r.qty}));structOpcRows.forEach(r=>rows.push({t:'row',desc:r.name,qty:r.qty,unit:r.unit,sub:r.sub,opcional:true}));}
+    if(val||structOpcRows.length){if(ov){if(val&&!stropc)total+=val;rows.push({t:'cat',desc:'Estructura',sub:val||undefined,pct:catPct('pctStruct'),opcional:stropc||undefined});structRowsData.forEach(r=>rows.push({t:'subq',desc:r.name,qty:r.qty}));}else{if(totStruct&&!stropc)total+=totStruct;let psT=catPct('pctStruct');rows.push({t:'cat',desc:'Estructura',opcional:stropc||undefined});structRowsData.forEach(r=>rows.push({t:'row',desc:r.name,qty:r.qty,unit:r.unit,sub:r.sub,pct:psT}));}structOpcRows.forEach(r=>rows.push({t:'row',desc:r.name,qty:r.qty,unit:r.unit,sub:r.sub,opcional:true}));}
   }
   if(SRV.Tarima){let taropc=sOpc('Tarima');let an=parseFloat(v('tarAncho'))||0,lg=parseFloat(v('tarLargo'))||0,m2=parseFloat((an*lg).toFixed(2))||0,pxm2=parseInt(v('tarPxm2'))||80000,val=m2*pxm2;let totTar=val,pctTar=catPct('pctTar');let tarOpcRows=[];(d.extraTar||[]).forEach(it=>{let a=parseFloat(it.an)||0,b=parseFloat(it.lg)||0,p=parseInt(it.pxm2)||0,m2x=parseFloat((a*b).toFixed(2));if(a&&b&&p){if(taropc||it.opt)tarOpcRows.push({a,b,p,m2x});else totTar+=m2x*p;}});if(totTar||tarOpcRows.length){if(totTar&&!taropc)total+=totTar;let dimStr=an&&lg?an+'×'+lg+'m ('+m2+' m²)':'('+m2+' m²)';rows.push({t:'cat',desc:'Tarima',opcional:taropc||undefined});if(val)rows.push({t:'row',desc:'Tarima cubierta '+dimStr,qty:m2,qtyUnit:'m²',unit:pxm2,sub:val,pct:pctTar,opcional:taropc||undefined});(d.extraTar||[]).forEach(it=>{let a=parseFloat(it.an)||0,b=parseFloat(it.lg)||0,p=parseInt(it.pxm2)||0,m2x=parseFloat((a*b).toFixed(2));if(a&&b&&p){if(taropc||it.opt)rows.push({t:'row',desc:'(Opcional) Tarima adicional '+a+'×'+b+'m ('+m2x+' m²)',qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar,opcional:true});else rows.push({t:'row',desc:'Tarima adicional '+a+'×'+b+'m ('+m2x+' m²)',qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar});}});}}
   if(SRV.Pista){let pistaopc=sOpc('Pista');let lg=parseFloat(v('pistaLargo'))||0,an=parseFloat(v('pistaAncho'))||0,m2=lg*an;let tipoRate=parseInt(v('pistaTipo'))||0;let autoPrice=tipoRate&&m2?Math.round(m2*tipoRate):0;let manual=parseInt(v('pistaPrecio'))||0;let val=manual||autoPrice;if(val){if(!pistaopc)total+=val;const TIPO_LABELS={'100000':'Print personalizado','250000':'Espejo','0':'Pista de baile'};let tipoLabel=TIPO_LABELS[String(tipoRate)]||'Pista de baile';let dimStr=lg&&an?lg+'×'+an+' m ('+m2.toFixed(1)+' m²)':'';let d=dimStr?tipoLabel+' '+dimStr:'Pista de baile';rows.push({t:'cat',desc:'Pista de Baile',opcional:pistaopc||undefined});rows.push({t:'row',desc:d,qty:m2||1,qtyUnit:m2?'m²':'',unit:val,sub:val,opcional:pistaopc||undefined});}}
   if(SRV.Techo){let techoopc=sOpc('Techo');let ov=parseInt(v('techoPrecio'))||0,base=parseInt(v('techoOpt'))||4000000,val=ov||base;let totTecho=val,pctTecho=catPct('pctTecho');(d.extraTecho||[]).forEach(it=>{if(!(techoopc||it.opt))totTecho+=parseInt(it.price)||0;});if(!techoopc)total+=totTecho;rows.push({t:'cat',desc:'Techos y Carpas',opcional:techoopc||undefined});rows.push({t:'row',desc:'Techo / Carpa',qty:1,unit:val,sub:val,pct:pctTecho,opcional:techoopc||undefined});(d.extraTecho||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){if(techoopc||it.opt)rows.push({t:'row',desc:'(Opcional) Techo adicional',qty:1,unit:p,sub:p,pct:pctTecho,opcional:true});else rows.push({t:'row',desc:'Techo adicional',qty:1,unit:p,sub:p,pct:pctTecho});}});}
   if(SRV.Gen){let genopc=sOpc('Gen');let ov=parseInt(v('genPrecio'))||0,base=parseInt(v('genOpt'))||1400000,val=ov||base;let totGen=val,pctGen=catPct('pctGen');(d.extraGen||[]).forEach(it=>{if(!(genopc||it.opt))totGen+=parseInt(it.price)||0;});if(!genopc)total+=totGen;rows.push({t:'cat',desc:'Electricidad',opcional:genopc||undefined});rows.push({t:'row',desc:'Planta eléctrica',qty:1,unit:val,sub:val,pct:pctGen,opcional:genopc||undefined});(d.extraGen||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){let lbl=it.sel?EXTRA_GEN_OPTS.find(o=>o.p===parseInt(it.sel))?.l||'Planta adicional':'Planta adicional';if(genopc||it.opt)rows.push({t:'row',desc:'(Opcional) '+lbl,qty:1,unit:p,sub:p,pct:pctGen,opcional:true});else rows.push({t:'row',desc:lbl,qty:1,unit:p,sub:p,pct:pctGen});}});}
   if(SRV.Efectos){let efopc=sOpc('Efectos');const EF_NM={efCryo:'Cryo Jet DMX LED RGB',efSpark:'Sparkular (Volcanes DMX)',efVent:'Ventury — cañón papel metalizado',efLlama:'Lanza Llamas DMX',efHumo:'Cámara de humo 2000w'};const EF_QI={efCryo:'qiCryo',efSpark:'qiSpark',efVent:'qiVent',efLlama:'qiLlama',efHumo:'qiHumo'};const EF_PI={efCryo:'piCryo',efSpark:'piSpark',efVent:'piVent',efLlama:'piLlama',efHumo:'piHumo'};let efIt=[],efTot=0,efOpcRows=[],pctEf=catPct('pctEfectos');Object.keys(EF_NM).forEach(eid=>{if(!on(eid))return;let q=parseInt(v(EF_QI[eid]))||0,p=parseInt(v(EF_PI[eid]))||0;if(q&&p){if(efopc||bOpc(eid))efOpcRows.push({nm:'(Opcional) '+EF_NM[eid],q,sub:q*p});else{efIt.push({nm:EF_NM[eid],q,sub:q*p});efTot+=q*p;}}});
-    (d.extraEfectos||[]).forEach(it=>{if(!it.n)return;let q=parseInt(it.q)||1,p=parseInt(it.p)||0,xd=parseInt(it.d)||1;let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;if(efopc||it.opt){if(p)efOpcRows.push({nm:'(Opcional) '+nd,q,sub:s,noDay:true,opcional:true});}else if(q&&p){efIt.push({nm:nd,q,sub:s,noDay:true});efTot+=s;}});
+    (d.extraEfectos||[]).forEach(it=>{if(!it.n)return;let q=parseInt(it.q)||1,p=parseInt(it.p)||0,xd=numDiasGlobal>1?1:(parseInt(it.d)||1);let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;if(efopc||it.opt){if(p)efOpcRows.push({nm:'(Opcional) '+nd,q,sub:s,noDay:true,opcional:true});}else if(q&&p){efIt.push({nm:nd,q,sub:s,noDay:true});efTot+=s;}});
     let hasLaser=on('efLaser');if(efTot>0||efOpcRows.length>0){if(efTot>0&&!efopc)total+=efTot;rows.push({t:'cat',desc:'Efectos Especiales',sub:efTot>0?efTot:undefined,pct:pctEf,opcional:efopc||undefined});efIt.forEach(e=>rows.push({t:'sub',desc:'▸ '+e.nm+' ×'+e.q}));efOpcRows.forEach(e=>rows.push({t:'row',desc:e.nm,qty:e.q,unit:e.sub/e.q,sub:e.sub,opcional:true}));}if(hasLaser){if(efTot<=0&&efOpcRows.length===0)rows.push({t:'cat',desc:'Efectos Especiales'});rows.push({t:'cortesia',desc:'Show de Laser Computarizado'});}}
-  if(SRV.DJ){let djopc=!!(d.srvOpcs?.DJ);let equip=v('djEquip')||'cdj';let edesc=equip==='rx3'?'Pioneer XDJ RX3':'Rack Set Pioneer 2×CDJ 2000 NXS + DJM 900 NXS';let ep=parseInt(v('djPrecio'))||0,pctDJ=catPct('pctDJ');let backlineP=parseInt(v('backlinePrecio'))||0;if(ep||d.djPersOn||backlineP||(d.extraDJ||[]).length){rows.push({t:'cat',desc:'DJ'});}if(ep){if(!djopc)total+=ep;rows.push({t:'row',desc:edesc,qty:1,unit:ep,sub:ep,pct:pctDJ,opcional:djopc||undefined,categoria:'entretenimiento_artista'});}if(d.djPersOn){let pp=parseInt(v('djPersPrecio'))||0;if(pp){if(!djopc)total+=pp;rows.push({t:'row',desc:'Servicio de DJ',qty:1,unit:pp,sub:pp,pct:pctDJ,opcional:djopc||undefined,categoria:'entretenimiento_artista'});}}if(backlineP){if(!djopc)total+=backlineP;rows.push({t:'row',desc:'Backline orquesta/banda',qty:1,unit:backlineP,sub:backlineP,pct:pctDJ,opcional:djopc||undefined,categoria:'equipo_alquiler',orquesta:!!d.orquestaOn});}(d.extraDJ||[]).forEach(it=>{if(!it.n)return;let xopc=djopc||it.opt||false;let q=parseInt(it.q)||1,p=parseInt(it.p)||0,xd=parseInt(it.d)||1;if(!p)return;let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;if(!xopc)total+=s;rows.push({t:'row',desc:nd,qty:q,unit:p,sub:s,pct:pctDJ,noDay:true,opcional:xopc||undefined,categoria:'entretenimiento_artista'});});}
+  if(SRV.DJ){let djopc=!!(d.srvOpcs?.DJ);let equip=v('djEquip')||'cdj';let edesc=equip==='rx3'?'Pioneer XDJ RX3':'Rack Set Pioneer 2×CDJ 2000 NXS + DJM 900 NXS';let ep=parseInt(v('djPrecio'))||0,pctDJ=catPct('pctDJ');let backlineP=parseInt(v('backlinePrecio'))||0;if(ep||d.djPersOn||backlineP||(d.extraDJ||[]).length){rows.push({t:'cat',desc:'DJ'});}if(ep){if(!djopc)total+=ep;rows.push({t:'row',desc:edesc,qty:1,unit:ep,sub:ep,pct:pctDJ,opcional:djopc||undefined,categoria:'entretenimiento_artista'});}if(d.djPersOn){let pp=parseInt(v('djPersPrecio'))||0;if(pp){if(!djopc)total+=pp;rows.push({t:'row',desc:'Servicio de DJ',qty:1,unit:pp,sub:pp,pct:pctDJ,opcional:djopc||undefined,categoria:'entretenimiento_artista'});}}if(backlineP){if(!djopc)total+=backlineP;rows.push({t:'row',desc:'Backline orquesta/banda',qty:1,unit:backlineP,sub:backlineP,pct:pctDJ,opcional:djopc||undefined,categoria:'equipo_alquiler',orquesta:!!d.orquestaOn});}(d.extraDJ||[]).forEach(it=>{if(!it.n)return;let xopc=djopc||it.opt||false;let q=parseInt(it.q)||1,p=parseInt(it.p)||0,xd=numDiasGlobal>1?1:(parseInt(it.d)||1);if(!p)return;let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;if(!xopc)total+=s;rows.push({t:'row',desc:nd,qty:q,unit:p,sub:s,pct:pctDJ,noDay:numDiasGlobal>1?undefined:true,opcional:xopc||undefined,categoria:'entretenimiento_artista'});});}
   // dayTotal = base de equipos/servicios que sí escalan por día adicional (excluye transporte y personal técnico)
   let dayTotal=total;
   if(SRV.Transp){let tropc=sOpc('Transp');let val=parseInt(v('transpPrecio'))||0;if(val){if(tropc)rows.push({t:'row',desc:'Transporte / logística',qty:1,unit:val,sub:val,noDay:true,opcional:true});else transpTotal=val;}}
-  let addlRows=[],addlTotal=0,cortRows=[];(d.extras||[]).forEach(it=>{if(it.cort){if(it.n)cortRows.push({t:'cortesia',desc:it.n});return;}let q=parseInt(it.q)||0,p=parseInt(it.p)||0,xd=parseInt(it.dias)||1;if(it.n&&q&&p){let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;if(it.opt){addlRows.push({t:'catitem',desc:'(Opcional) '+nd,qty:q,unit:p,sub:s,noDay:true,opcional:true});}else{addlTotal+=s;addlRows.push({t:'catitem',desc:nd,qty:q,unit:p,sub:s,noDay:true});}}});
+  let addlRows=[],addlTotal=0,cortRows=[];(d.extras||[]).forEach(it=>{if(it.cort){if(it.n)cortRows.push({t:'cortesia',desc:it.n});return;}let q=parseInt(it.q)||0,p=parseInt(it.p)||0,md=numDiasGlobal>1,du=parseInt(it.dias)||0,xd=md?1:(du||1);if(it.n&&q&&p){let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;let ex={};if(md){let zmax=zoneDays?Math.max(0,zoneDays.length-1):numDiasGlobal-1;if(du){let dd=Math.min(du,zmax+1);ex.extraDays=Math.max(0,dd-1);if(dd<numDiasGlobal)nd+=' ('+dd+' día'+(dd>1?'s':'')+')';}let dp=parseFloat(it.dpct);if(it.dpct!==''&&it.dpct!=null&&!isNaN(dp))ex.pct=Math.max(0,Math.min(100,dp));}let rw=Object.assign({t:'catitem',desc:nd,qty:q,unit:p,sub:s,noDay:md?undefined:true},ex);if(it.opt){rw.desc='(Opcional) '+nd;rw.opcional=true;addlRows.push(rw);}else{addlTotal+=s;addlRows.push(rw);}}});
   let persRows=[],persTotal=0;
   PERS.forEach(p=>{if(!on('pRol_'+p.id))return;let q=parseInt(v('pQ_'+p.id))||0,r=parseInt(v('pR_'+p.id))||p.r;if(q>0){persRows.push({n:p.n,q,r,t:q*r});persTotal+=q*r;}});
   if(persRows.length){
@@ -1503,6 +1507,7 @@ function buildRowsFromData(d,globalNumDias){
   let _curSvcKey=null;
   rows.forEach(r=>{
     if(r.t==='cat'){_curSvcKey=CAT_SVC[r.desc]||(r.desc&&r.desc.startsWith('Sonido')?'sn':null)||null;}
+    if(r.t==='catitem')_curSvcKey=null;
     if(_curSvcKey&&r.sub!==undefined&&!r.noDay&&r.extraDays===undefined){
       let ed=_extraDays(_curSvcKey);
       if(ed!==numDiasGlobal-1)r.extraDays=ed;
@@ -1573,6 +1578,7 @@ function onNumDiasChange(){
   let n=Math.max(1,parseInt($('numDias').value)||1);
   let show=n>1;
   $('pctDiaField').style.display=show?'':'none';
+  if($('colUnitField'))$('colUnitField').style.display=show?'':'none';
   $('numDiasNote').style.display=show?'':'none';
   // Rebuild day buttons for new numDias
   if(show){
@@ -1685,12 +1691,13 @@ function removeExtraTecho(id){let el=$(id);if(el)el.remove();extraTechoItems=ext
 
 function addExtraLed(){let id='xtLed'+(ledItemId++);extraLedItems.push(id);let div=document.createElement('div');div.id=id;div.style.cssText='border:0.5px solid #dde;border-radius:5px;padding:7px 9px;margin-bottom:5px;background:#fafafa';div.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:5px;align-items:end;margin-bottom:5px"><div><label style="font-size:9.5px;color:#555">Ancho (m)</label><input type="number" class="xtled-an" value="3" step="0.5" oninput="recalcLED()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Alto (m)</label><input type="number" class="xtled-al" value="2" step="0.5" oninput="recalcLED()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Tipo</label><select class="xtled-tipo" style="width:100%;font-size:10px;padding:4px;border:0.5px solid #ccc;border-radius:4px"><option value="350000">Interior</option><option value="300000">Exterior</option></select></div><div><label style="font-size:9.5px;color:#555">$/m²</label><input type="number" class="xtled-pxm2" value="350000" oninput="recalcLED()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><button class="del-btn" onclick="removeExtraLed('${id}')" style="align-self:end">✕</button></div><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#E07020;cursor:pointer"><input type="checkbox" class="xtled-opt" style="width:auto;margin:0"/> Opcional</label>`;$('extraLedList').appendChild(div);recalcLED();}
 function removeExtraLed(id){let el=$(id);if(el)el.remove();extraLedItems=extraLedItems.filter(x=>x!==id);recalcLED();}
-function addExtraVideo(){let id='xtVid'+(videoItemId++);extraVideoItems.push(id);let div=document.createElement('div');div.id=id;div.style.cssText='border:0.5px solid #dde;border-radius:5px;padding:7px 9px;margin-bottom:5px;background:#fafafa';div.innerHTML=`<div style="margin-bottom:4px"><select class="xtvid-sel" onchange="onVidSel(this)" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"><option value="">— Seleccionar tipo —</option><option value='TV 43"'>TV 43"</option><option value='TV 55"'>TV 55"</option><option value='TV 65"'>TV 65"</option><option value='TV 75"'>TV 75"</option><option value="Atril Digital">Atril Digital</option><option value="Proyector Full HD">Proyector Full HD</option><option value="Proyector 4K">Proyector 4K</option><option value="Pantalla de proyección">Pantalla de proyección</option></select></div><div style="display:grid;grid-template-columns:1fr 52px 100px auto;gap:5px;align-items:end;margin-bottom:5px"><div><label style="font-size:9.5px;color:#555">Descripción</label><input class="xtvid-n" placeholder="O escribir descripción..." style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px;box-sizing:border-box"/></div><div><label style="font-size:9.5px;color:#555">Cant.</label><input type="number" class="xtvid-q" value="1" min="1" oninput="recalcLED()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">$/und</label><input type="number" class="xtvid-p" placeholder="0" oninput="recalcLED()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><button class="del-btn" onclick="removeExtraVideo('${id}')" style="align-self:end">✕</button></div><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#E07020;cursor:pointer"><input type="checkbox" class="xtvid-opt" style="width:auto;margin:0" oninput="recalcLED()"/> Opcional (no suma al total)</label>`;$('extraVideoList').appendChild(div);recalcLED();}
-function onVidSel(sel){if(sel.value){sel.closest('div[id]').querySelector('.xtvid-n').value=sel.value;sel.value='';}}
+function _vidInv(){let L=[];let g=FULL_INVENTORY.find(x=>x.cat==='Video');(g?g.items:[]).forEach(it=>{if(!/^m² Pantalla LED/.test(it.n))L.push({n:it.n,p:it.p||0});});['TV 43"','TV 55"','TV 65"','TV 75"','Proyector Full HD','Proyector 4K','Pantalla de proyección'].forEach(n=>{if(!L.some(x=>x.n===n))L.push({n,p:0});});return L;}
+function addExtraVideo(){let id='xtVid'+(videoItemId++);extraVideoItems.push(id);let opts=_vidInv().map(o=>`<option value="${o.n.replace(/"/g,'&quot;')}" data-price="${o.p}">${o.n.replace(/"/g,'&quot;')}${o.p?' — $'+o.p.toLocaleString('es-CO'):''}</option>`).join('');let div=document.createElement('div');div.className='ci';div.id=id;div.style.marginBottom='5px';div.innerHTML=`<div class="ci-top" onclick="togCl(this.closest('.ci'));recalcLED()"><div class="cb"></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><select class="lzsel xtvid-sel" onchange="onVidSel(this)" onclick="event.stopPropagation()" style="font-size:10px;padding:2px 4px;border:0.5px solid #ccc;border-radius:3px"><option value="">— Inventario (opcional) —</option>${opts}<option value="__otro__">Otro (escribir abajo)</option></select><input placeholder="Nombre del equipo (TV, atril, proyector...)" class="xtvid-n" onclick="event.stopPropagation()" style="border:none;background:transparent;font-size:11px;font-weight:500;padding:0;outline:none;width:100%"/></div></div><div class="ci-num"><div class="ci-field"><label>Cant.</label><input type="number" value="1" min="0" class="xtvid-q" onclick="event.stopPropagation()" oninput="recalcLED()"/></div><div class="ci-field"><label>$/und</label><input type="number" placeholder="0" class="xtvid-p" onclick="event.stopPropagation()" oninput="recalcLED()"/></div><button class="del-btn" onclick="event.stopPropagation();removeExtraVideo('${id}')" style="margin-left:auto">✕</button></div><label style="display:flex;align-items:center;gap:4px;font-size:9px;color:#E07020;cursor:pointer;padding:3px 8px 0" onclick="event.stopPropagation()"><input type="checkbox" class="xtvid-opt" style="width:auto;margin:0" oninput="recalcLED()"/> Opcional (no suma al total)</label>`;$('extraVideoList').appendChild(div);togCl(div);recalcLED();}
+function onVidSel(sel){let ci=sel.closest('.ci');let txt=ci.querySelector('.xtvid-n');let pi=ci.querySelector('.xtvid-p');let opt=sel.options[sel.selectedIndex];if(sel.value&&sel.value!=='__otro__'){txt.value=sel.value;let p=parseInt(opt.getAttribute('data-price'))||0;if(p&&pi&&!pi.value)pi.value=p;}sel.value='';recalcLED();}
 function removeExtraVideo(id){let el=$(id);if(el)el.remove();extraVideoItems=extraVideoItems.filter(x=>x!==id);recalcLED();}
 function _buildInvOpts(){let h='<option value="">— Inventario Nova (opcional) —</option>';FULL_INVENTORY.forEach(g=>{h+=`<optgroup label="${g.cat}">`;g.items.forEach(it=>{let p=it.p||0;h+=`<option value="${it.n}" data-price="${p}">${it.n}${p?' — $'+p.toLocaleString('es-CO'):''}</option>`;});h+='</optgroup>';});h+='<option value="__otro__">Otro (escribir abajo)</option>';return h;}
 function onExSel(sel){let row=sel.closest('div[id]');let n=row.querySelector('.exn');let p=row.querySelector('.exp');let opt=sel.options[sel.selectedIndex];if(sel.value&&sel.value!=='__otro__'){n.value=sel.value;let price=parseInt(opt.getAttribute('data-price'))||0;if(price&&p&&!p.value)p.value=price;}sel.value='';}
-function addExtra(){let id='ex'+(exId++);extraItems.push(id);let div=document.createElement('div');div.id=id;div.style.cssText='margin-bottom:6px;border:0.5px solid #dde;border-radius:5px;padding:7px 9px;background:#fafafa';div.innerHTML=`<div style="display:grid;grid-template-columns:1fr auto;gap:5px;margin-bottom:5px;align-items:center"><select class="exsel" onchange="onExSel(this)" style="font-size:10px;padding:3px 6px;border:0.5px solid #ccc;border-radius:3px;flex:1;width:100%">${_buildInvOpts()}</select><button class="del-btn" onclick="removeEx('${id}')">✕</button></div><div style="display:grid;grid-template-columns:2fr 0.55fr 1fr 0.75fr;gap:5px;align-items:end"><div style="display:flex;flex-direction:column;gap:3px"><input placeholder="Descripción del servicio o equipo" class="exn" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px;width:100%"/><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#2E9AB3;cursor:pointer"><input type="checkbox" class="excort" style="width:auto;margin:0"/> Cortesía (sin costo)</label><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#E07020;cursor:pointer"><input type="checkbox" class="exopt" style="width:auto;margin:0"/> Opcional (no suma al total)</label><div class="exmax" style="font-size:9px;color:#2E9AB3"></div></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0">Cant.</label><input type="number" value="1" min="0" class="exq" oninput="_capQty(this)" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0">Precio und. ($)</label><input type="number" placeholder="Precio $" class="exp" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0">Días</label><input type="number" value="1" min="1" class="exdias" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div></div>`;$('extraList').appendChild(div);}
+function addExtra(){let id='ex'+(exId++);extraItems.push(id);let div=document.createElement('div');div.id=id;div.style.cssText='margin-bottom:6px;border:0.5px solid #dde;border-radius:5px;padding:7px 9px;background:#fafafa';div.innerHTML=`<div style="display:grid;grid-template-columns:1fr auto;gap:5px;margin-bottom:5px;align-items:center"><select class="exsel" onchange="onExSel(this)" style="font-size:10px;padding:3px 6px;border:0.5px solid #ccc;border-radius:3px;flex:1;width:100%">${_buildInvOpts()}</select><button class="del-btn" onclick="removeEx('${id}')">✕</button></div><div style="display:grid;grid-template-columns:2fr 0.55fr 1fr 0.7fr 0.8fr;gap:5px;align-items:end"><div style="display:flex;flex-direction:column;gap:3px"><input placeholder="Descripción del servicio o equipo" class="exn" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px;width:100%"/><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#2E9AB3;cursor:pointer"><input type="checkbox" class="excort" style="width:auto;margin:0"/> Cortesía (sin costo)</label><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#E07020;cursor:pointer"><input type="checkbox" class="exopt" style="width:auto;margin:0"/> Opcional (no suma al total)</label><div class="exmax" style="font-size:9px;color:#2E9AB3"></div></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0">Cant.</label><input type="number" value="1" min="0" class="exq" oninput="_capQty(this)" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0">Precio und. ($)</label><input type="number" placeholder="Precio $" class="exp" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0" title="Días que se usa este ítem. Vacío = todos los días del evento">Días de uso</label><input type="number" value="" placeholder="todos" min="1" class="exdias" title="Vacío = todos los días del evento" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div><div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:9px;color:#999;margin:0" title="% de cobro del día adicional para este ítem. Vacío = el % global">% día adic.</label><input type="number" value="" placeholder="global" min="0" max="100" class="exdpct" title="Vacío = usa el % global" style="font-size:11px;padding:5px 8px;border:0.5px solid #ccc;border-radius:4px"/></div></div>`;$('extraList').appendChild(div);}
 function removeEx(id){let el=$(id);if(el)el.remove();extraItems=extraItems.filter(x=>x!==id);}
 
 // ── OPTIONAL CHECKBOXES — built-in items & services ──
@@ -1943,8 +1950,12 @@ function gen(){
 
   let{numDias,pctDia,showDias}=getDayInfo();
   let nCols=showDias?5:4;
+  const showUnit=showDias&&($('colUnit')?.value==='1');
+  const NC=nCols+(showUnit?1:0);
   $('qTheadRow').innerHTML=showDias
-    ? `<th style="width:36%">Descripción</th><th class="r" style="width:9%">Cant.</th><th class="r" style="width:17%">Día 1</th><th class="r" style="width:19%">Día adicional c/u (def. ${fmtN(pctDia)}%)</th><th class="r" style="width:19%">Total ×${numDias} días</th>`
+    ? (showUnit
+      ? `<th style="width:30%">Descripción</th><th class="r" style="width:7%">Cant.</th><th class="r" style="width:14%">Costo / unidad</th><th class="r" style="width:14%">Día 1</th><th class="r" style="width:17%">Día adicional c/u (def. ${fmtN(pctDia)}%)</th><th class="r" style="width:18%">Total ×${numDias} días</th>`
+      : `<th style="width:36%">Descripción</th><th class="r" style="width:9%">Cant.</th><th class="r" style="width:17%">Día 1</th><th class="r" style="width:19%">Día adicional c/u (def. ${fmtN(pctDia)}%)</th><th class="r" style="width:19%">Total ×${numDias} días</th>`)
     : `<th style="width:50%">Descripción</th><th class="r" style="width:10%">Cant.</th><th class="r" style="width:20%">Costo / Unidad</th><th class="r" style="width:20%">Sub-Total</th>`;
 
   let body=$('qBody');body.innerHTML='';
@@ -1990,9 +2001,16 @@ function gen(){
       } else if(r.t==='row'&&r.opcional){tr.className='opcional';let qtyStr=(r.qty??'')+(r.qtyUnit||'');tr.innerHTML=showDias?`<td>${r.desc} <span style="font-size:8.5px;color:#E07020;font-weight:700">[OPCIONAL]</span></td><td class="r">${qtyStr}</td><td class="r" style="color:#bbb">${fmt(r.sub)}</td><td class="ct" colspan="${nCols-3}" style="color:#bbb;font-size:9px">no incluido</td>`:`<td>${r.desc} <span style="font-size:8.5px;color:#E07020;font-weight:700">[OPCIONAL]</span></td><td class="r">${qtyStr}</td><td class="r" style="color:#bbb">${fmt(r.unit)}</td><td class="r" style="color:#bbb">${fmt(r.sub)}</td>`;prevCat=false;
       } else if(r.t==='row'){tr.className='row';let qtyStr=(r.qty??'')+(r.qtyUnit||'');tr.innerHTML=showDias?`<td>${r.desc}</td><td class="r">${qtyStr}</td><td class="r">${fmt(r.sub)}</td>${dayCells(r)}`:`<td>${r.desc}</td><td class="r">${qtyStr}</td><td class="r">${fmt(r.unit)}</td><td class="r">${fmt(r.sub)}</td>`;prevCat=false;
       } else if(r.t==='cortesia'){tr.className='row';tr.innerHTML=`<td>${r.desc}</td><td class="r">1</td><td class="ct" colspan="${nCols-2}">CORTESÍA</td>`;prevCat=false;}
+      if((r.t==='row'||r.t==='catitem')&&r.unit!=null&&!isNaN(r.unit))tr.dataset.unit=r.unit;
       body.appendChild(tr);
     });
   });
+  if(showUnit){[...body.children].forEach(tr=>{
+    if(tr.children.length===1){tr.children[0].colSpan=(parseInt(tr.children[0].getAttribute('colspan'))||1)+1;return;}
+    let u=document.createElement('td');
+    if(tr.dataset.unit!==undefined&&tr.dataset.unit!==''){u.className='r';u.textContent=fmt(+tr.dataset.unit);}
+    tr.insertBefore(u,tr.children[2]);
+  });}
   lastRows=allRows;lastTotal=allTotal;
   let total=allTotal;
   let extraMainDayTotal=0,extraAddlDayTotal=0;
@@ -2013,14 +2031,14 @@ function gen(){
   let grand=sub_+iva+allTranspTotal;
   lastGrand=grand;
 
-  const ft=(l,v,c)=>{let r=document.createElement('tr');r.className='ftr';r.innerHTML=`<td colspan="${nCols-1}" style="text-align:right;color:${c||'#777'}">${l}</td><td class="r" style="color:${c||'#1a1a1a'};font-weight:700">${v}</td>`;body.appendChild(r);};
-  let sp=document.createElement('tr');sp.className='sp';sp.innerHTML=`<td colspan="${nCols}"></td>`;body.appendChild(sp);
+  const ft=(l,v,c)=>{let r=document.createElement('tr');r.className='ftr';r.innerHTML=`<td colspan="${NC-1}" style="text-align:right;color:${c||'#777'}">${l}</td><td class="r" style="color:${c||'#1a1a1a'};font-weight:700">${v}</td>`;body.appendChild(r);};
+  let sp=document.createElement('tr');sp.className='sp';sp.innerHTML=`<td colspan="${NC}"></td>`;body.appendChild(sp);
   ft(showDias?'Subtotal día 1':'Subtotal',fmt(total+allAddlTotal));
   if(showDias)ft(`Días adicionales (${numDias-1} día${numDias>2?'s':''} extra)`,fmt(extraMainDayTotal+extraAddlDayTotal),'#2B6E7F');
   if(allTranspTotal>0)ft('Transporte',fmt(allTranspTotal),'#2B6E7F');
   if(descOn&&desc>0){let lbl=($('descMot').value||'Descuento')+(descPct?' ('+$('descAmt').value+'%)':'');ft(lbl,'-'+fmt(desc),'#c0392b');}
   if(ivaOn)ft('IVA (19%)',fmt(iva));
-  let rT=document.createElement('tr');rT.className='tot';rT.innerHTML=`<td colspan="${nCols-1}" style="text-align:right;font-size:9px;font-weight:400;opacity:.85">Oferta válida 15 días · 50% anticipado · 50% 48 horas previas al evento${showDias?' · Cotización para '+numDias+' días de evento':''}</td><td class="r">${fmt(grand)}</td>`;
+  let rT=document.createElement('tr');rT.className='tot';rT.innerHTML=`<td colspan="${NC-1}" style="text-align:right;font-size:9px;font-weight:400;opacity:.85">Oferta válida 15 días · 50% anticipado · 50% 48 horas previas al evento${showDias?' · Cotización para '+numDias+' días de evento':''}</td><td class="r">${fmt(grand)}</td>`;
   body.appendChild(rT);
   $('qNota').textContent=ivaOn?'':'* Esta cotización no incluye IVA.';
   // Reset edit mode on regenerate
@@ -2059,7 +2077,8 @@ async function exportPDF(){
     btn.textContent='📄 PDF';btn.disabled=false;
     // Fallback de último recurso: solo llega aquí si faltan los archivos de
     // vendor/, no por falta de internet — ya no se descarga nada de afuera.
-    let old=document.title;document.title=getFilename();window.print();setTimeout(()=>document.title=old,1000);
+    let old=document.title;document.title=' ';window.print();setTimeout(()=>document.title=old,1000);
+    guardarEnSistema();
     return;
   }
   // Ocultar barra de botones y controles de edición para que no aparezcan en el PDF
@@ -2153,6 +2172,7 @@ async function exportPDF(){
     if(editMode)_showEditCtrl();
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    try{pdf.setProperties({title:getFilename(),subject:'',author:'',keywords:'',creator:''});}catch(e){}
     const W=pdf.internal.pageSize.getWidth();
     const H=pdf.internal.pageSize.getHeight();
     const mg=8; // margen mm
@@ -2169,6 +2189,8 @@ async function exportPDF(){
       }
     }
     pdf.save(getFilename()+'.pdf');
+    // Todo PDF generado queda guardado en el sistema (con sus items adicionales).
+    try{await guardarEnSistema();}catch(e){console.error(e);}
     // Antes esto disparaba saveQuote() para dejar el .json al lado del PDF y
     // poder reabrir la cotizacion. Ya no hace falta: el estado del formulario
     // se guarda en la nube (estado_app) y se reabre desde "Cargar cotizacion".
@@ -2184,9 +2206,10 @@ async function exportPDF(){
     // eso "contamina" el canvas y bloquea la exportación a imagen/PDF.
     // En ese caso usamos la impresión del navegador como respaldo (sin perder el logo).
     if(/tainted|SecurityError|insecure/i.test(err.message||'')){
-      let old=document.title;document.title=getFilename();
+      let old=document.title;document.title=' ';
       window.print();
       setTimeout(()=>document.title=old,1000);
+      guardarEnSistema();
     }else{
       alert('Error generando PDF: '+err.message);
     }
@@ -2893,7 +2916,7 @@ function buildSupabasePayload(){
     rows.forEach(r=>{
       if(r.t==='cat')currentCat=r.desc;
       if(r.sub===undefined||r.sub===null||r.opcional)return;
-      let areaNombre=areaFromCatDesc(currentCat);
+      let areaNombre=(r.t==='catitem')?'OTROS':areaFromCatDesc(currentCat);
       items.push({
         area_nombre:areaNombre,
         descripcion:r.desc,
@@ -3097,7 +3120,7 @@ window._selfCheck=function(){
       if(tr.classList.contains('ftr')){if(/^Subtotal/.test(t.trim()))sub=money(tr.lastElementChild.textContent);return;}
       if(tr.classList.contains('tot')||tr.classList.contains('sp')||tr.classList.contains('opcional'))return;
       if(/Incluido|CORTES/.test(t))return;
-      const cel=showDias?tr.children[2]:tr.lastElementChild;
+      const cel=showDias?tr.children[2+(($('colUnit')?.value==='1')?1:0)]:tr.lastElementChild;
       const v=money(cel?cel.textContent:'');
       if(v!==null)impreso+=v;
     });
@@ -3173,6 +3196,66 @@ if('serviceWorker' in navigator){
     if(recargando)return;recargando=true;location.reload();
   });
 }
+</script>
+
+<!-- SOPORTE / SUGERENCIAS -->
+<style>
+#tkBtn{position:fixed;right:14px;bottom:14px;z-index:9000;background:#2E9AB3;color:#fff;border:none;border-radius:22px;padding:9px 14px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+#tkModal{display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px}
+#tkModal .tkBox{background:#fff;color:#222;border-radius:12px;padding:16px;width:100%;max-width:420px;font-family:inherit}
+#tkModal select,#tkModal textarea{width:100%;box-sizing:border-box;margin:4px 0 10px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit}
+#tkModal textarea{min-height:110px;resize:vertical}
+#tkModal .tkRow{display:flex;gap:8px;justify-content:flex-end}
+#tkModal button{padding:8px 14px;border-radius:6px;border:none;font-weight:700;cursor:pointer}
+@media print{#tkBtn,#tkModal{display:none!important}}
+</style>
+<button id="tkBtn" type="button" onclick="abrirTicket()">💬 Soporte / Sugerencia</button>
+<div id="tkModal"><div class="tkBox">
+  <div style="font-weight:700;font-size:15px;margin-bottom:8px">Soporte o sugerencia</div>
+  <label style="font-size:12px">Tipo</label>
+  <select id="tkTipo"><option value="soporte">🛠 Soporte (algo no funciona)</option><option value="sugerencia">💡 Sugerencia / mejora</option></select>
+  <label style="font-size:12px">Cuéntanos</label>
+  <textarea id="tkMsg" placeholder="Describe el problema o la idea. Se adjunta automáticamente la cotización que tienes abierta."></textarea>
+  <div id="tkEstado" style="font-size:11px;color:#888;min-height:14px;margin-bottom:8px"></div>
+  <div class="tkRow"><button type="button" style="background:#eee" onclick="cerrarTicket()">Cancelar</button><button type="button" id="tkEnviar" style="background:#2E9AB3;color:#fff" onclick="enviarTicket()">Enviar</button></div>
+</div></div>
+<script>
+function getTicketQueue(){try{return JSON.parse(localStorage.getItem('novaTicketQueue')||'[]');}catch(e){return[];}}
+function setTicketQueue(q){try{localStorage.setItem('novaTicketQueue',JSON.stringify(q));}catch(e){}}
+function abrirTicket(){document.getElementById('tkEstado').textContent='';document.getElementById('tkModal').style.display='flex';setTimeout(()=>document.getElementById('tkMsg').focus(),50);}
+function cerrarTicket(){document.getElementById('tkModal').style.display='none';}
+async function _enviarTicketRPC(p){
+  const sb=getSb();if(!sb)throw new Error('Sin cliente');
+  const{error}=await sb.rpc('enviar_ticket_soporte',{payload:p});if(error)throw error;
+}
+async function enviarTicket(){
+  const msg=document.getElementById('tkMsg').value.trim();
+  const est=document.getElementById('tkEstado');
+  if(!msg){est.textContent='Escribe un mensaje.';est.style.color='#c00';return;}
+  const btn=document.getElementById('tkEnviar');btn.disabled=true;
+  let cli='';try{cli=($('cli')||{}).value||'';}catch(e){}
+  const p={client_uuid:newClientUuid(),tipo:document.getElementById('tkTipo').value,mensaje:msg,
+    cotizacion_id:(typeof currentCotizacionId!=='undefined'&&currentCotizacionId)||null,cliente:cli,
+    contexto:{ua:navigator.userAgent,url:location.href.split('#')[0],sala:(typeof rooms!=='undefined'&&rooms[activeRoom])?rooms[activeRoom].name:null,ts:new Date().toISOString(),quote_uuid:currentClientUuid||null}};
+  try{
+    if(!navigator.onLine||!(await refrescarSesion()))throw new Error('offline');
+    await _enviarTicketRPC(p);
+    est.textContent='✅ Enviado, gracias.';est.style.color='#2E9AB3';
+  }catch(e){
+    const q=getTicketQueue();q.push(p);setTicketQueue(q);
+    est.textContent='⚠️ Guardado en este dispositivo; se enviará solo al reconectar/entrar.';est.style.color='#c98a00';
+  }
+  document.getElementById('tkMsg').value='';btn.disabled=false;
+  setTimeout(cerrarTicket,1600);
+}
+async function flushTicketQueue(){
+  let q=getTicketQueue();if(!q.length||!navigator.onLine)return;
+  if(!(await refrescarSesion()))return;
+  const rest=[];for(const p of q){try{await _enviarTicketRPC(p);}catch(e){rest.push(p);}}
+  setTicketQueue(rest);
+}
+window.addEventListener('online',flushTicketQueue);
+window.addEventListener('load',()=>setTimeout(flushTicketQueue,2500));
 </script>
 </body>
 </html>
