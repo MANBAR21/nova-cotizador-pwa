@@ -141,6 +141,7 @@ td[contenteditable='true']:focus{background:rgba(46,154,179,.07)!important}
 .room-tabs{display:flex;align-items:center;gap:5px;margin-bottom:10px;flex-wrap:wrap}
 .rtab{padding:6px 13px;border:1.5px solid #ccc;border-radius:6px;font-size:11px;cursor:pointer;background:white;color:#555;display:inline-flex;align-items:center;gap:6px;transition:.15s}
 .rtab.on{background:#2E9AB3;color:white;border-color:#2E9AB3;font-weight:700}
+.rtab.on .rtab-name{cursor:text;border-bottom:1px dashed rgba(255,255,255,.6)}
 .rtab-del{font-size:11px;opacity:.55;cursor:pointer;padding:0 1px;line-height:1}
 .rtab-del:hover{opacity:1}
 .add-zone{padding:5px 11px;border:1.5px dashed #2E9AB3;border-radius:6px;font-size:11px;color:#2E9AB3;background:none;cursor:pointer;font-family:Arial}
@@ -1130,12 +1131,22 @@ function addRoom(){
   recalc();renderRoomTabs();
 }
 function deleteRoom(idx){if(rooms.length<=1)return;if(!confirm('¿Eliminar esta zona?'))return;rooms.splice(idx,1);activeRoom=Math.min(activeRoom,rooms.length-1);roomRestore(rooms[activeRoom].data);renderRoomTabs();}
+// Clic sobre el nombre de la zona activa: cambiar el nombre.
+function renameRoom(idx){
+  const actual=rooms[idx].name||'';
+  let n=prompt('Nuevo nombre de la zona:',actual);
+  if(n===null)return;
+  n=n.trim();if(!n||n===actual)return;
+  rooms[idx].name=n;
+  if(idx>0&&$('zoneName'))$('zoneName').value=n;
+  renderRoomTabs();
+}
 function renderRoomTabs(){
   let c=$('roomTabs');c.innerHTML='';
   rooms.forEach((r,i)=>{
     let t=document.createElement('div');t.className='rtab'+(i===activeRoom?' on':'');
-    t.innerHTML=`<span>${r.name}</span>${rooms.length>1?`<span class="rtab-del" onclick="event.stopPropagation();deleteRoom(${i})">×</span>`:''}`;
-    t.onclick=()=>switchRoom(i);c.appendChild(t);
+    t.innerHTML=`<span class="rtab-name" title="${i===activeRoom?'Clic para cambiar el nombre':''}">${String(r.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>${rooms.length>1?`<span class="rtab-del" onclick="event.stopPropagation();deleteRoom(${i})">×</span>`:''}`;
+    t.onclick=()=>{if(i===activeRoom)renameRoom(i);else switchRoom(i);};c.appendChild(t);
   });
   let ab=document.createElement('button');ab.className='add-zone';ab.textContent='+ Zona';ab.onclick=addRoom;c.appendChild(ab);
 }
