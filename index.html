@@ -2101,7 +2101,7 @@ async function exportPDF(){
   // cotizacion al ancho del viewport real: en un iPhone de 375px sale angosta y
   // luego se estira a los 190mm de la hoja A4, que es el "se ve estirado".
   // 960 es el max-width del body, o sea el ancho al que se ve en escritorio.
-  // Se fija en el DOM REAL y no solo en html2canvas porque roomSplitsY se mide
+  // Se fija en el DOM REAL y no solo en html2canvas porque los cortes de pagina se miden
   // aqui abajo con getBoundingClientRect(): si se midiera a 375 y se capturara
   // a 960, los cortes de pagina caerian en el lugar equivocado.
   const PDF_ANCHO=960;
@@ -2113,12 +2113,23 @@ async function exportPDF(){
   // Calcular posiciones de separadores de sala ANTES de capturar (con visibilidad hidden no cambia layout)
   let qOutEl=$('qOut');
   let qOutRect=qOutEl.getBoundingClientRect();
-  let hdrRows=Array.from($('qBody').querySelectorAll('tr.room-hdr-row'));
-  // Split points: start new page at each room header EXCEPT the first one
-  // (first room stays on page 1 together with the quote header)
-  let roomSplitsY=hdrRows.slice(1).map(tr=>{
-    let rect=tr.getBoundingClientRect();
-    return Math.round((rect.top-qOutRect.top)*PDF_SCALE);
+  // Puntos donde SI se puede cortar la pagina: el borde inferior de cada fila.
+  // Nunca en medio de una fila. Las filas que son titulo (encabezado de salon o
+  // categoria) no son punto de corte: un titulo no se queda solo al final de una
+  // pagina, se va a la siguiente junto con su primera fila.
+  // Se mide aqui, con el ancho ya fijado, para que coincida con la captura.
+  const _y=(r)=>Math.round((r.bottom-qOutRect.top)*PDF_SCALE);
+  let cortesBuenos=[],cortesTodos=[];
+  Array.from($('qBody').querySelectorAll('tr')).forEach(tr=>{
+    let r=tr.getBoundingClientRect();
+    if(!r.height)return;
+    cortesTodos.push(_y(r));
+    if(!tr.classList.contains('room-hdr-row')&&!tr.classList.contains('cat'))cortesBuenos.push(_y(r));
+  });
+  // La tabla completa y la nota final tambien son bloques que no se parten.
+  [qOutEl.querySelector('table'),$('qNota')].forEach(el=>{
+    if(!el)return;let r=el.getBoundingClientRect();
+    if(r.height){let y=_y(r);cortesTodos.push(y);cortesBuenos.push(y);}
   });
   // Pre-convertir logo a data URL para que html2canvas lo capture sin problemas CORS
   let logoDiv=document.querySelector('.qlogo');
@@ -2189,15 +2200,32 @@ async function exportPDF(){
     const mg=8; // margen mm
     const cW=W-mg*2;
     const pageH=H-mg*2;
-    if(roomSplitsY.length===0){
-      // Sala única: comportamiento original
-      _addPdfSection(pdf,canvas,0,canvas.height,cW,pageH,mg,true);
-    }else{
-      // Multi-sala: nueva página por cada sala (salvo la primera que va con el encabezado)
-      let sections=[0,...roomSplitsY,canvas.height];
-      for(let i=0;i<sections.length-1;i++){
-        _addPdfSection(pdf,canvas,sections[i],sections[i+1],cW,pageH,mg,i===0);
+    // Paginacion continua: los salones siguen uno tras otro, sin forzar pagina
+    // nueva por salon. Cada pagina se llena hasta donde cabe y se corta en el
+    // ultimo limite de fila que entra, asi ninguna fila queda partida. Los
+    // margenes (mg) se mantienen en todas las paginas; si una fila no cabe en el
+    // espacio que queda, se pasa entera a la pagina siguiente (la informacion
+    // completa pesa mas que aprovechar el ultimo renglon).
+    const pxPorPagina=Math.floor(pageH*canvas.width/cW);
+    const sorted=a=>Array.from(new Set(a)).sort((x,y)=>x-y);
+    const buenos=sorted(cortesBuenos),todos=sorted(cortesTodos);
+    const mejorCorte=(lista,y0,limite)=>{let m=null;for(const c of lista){if(c>y0+8&&c<=limite)m=c;}return m;};
+    let y0=0,primera=true;
+    while(y0<canvas.height){
+      let y1;
+      if(canvas.height-y0<=pxPorPagina)y1=canvas.height;
+      else{
+        const limite=y0+pxPorPagina;
+        y1=mejorCorte(buenos,y0,limite);
+        if(y1===null)y1=mejorCorte(todos,y0,limite);
+        if(y1===null)y1=limite; // fila mas alta que una pagina: unico caso en que se parte
       }
+      if(!primera)pdf.addPage();
+      const chunk=y1-y0;
+      const tmp=document.createElement('canvas');tmp.width=canvas.width;tmp.height=chunk;
+      tmp.getContext('2d').drawImage(canvas,0,y0,canvas.width,chunk,0,0,canvas.width,chunk);
+      pdf.addImage(tmp.toDataURL('image/jpeg',0.97),'JPEG',mg,mg,cW,(chunk/canvas.width)*cW);
+      y0=y1;primera=false;
     }
     pdf.save(getFilename()+'.pdf');
     // Todo PDF generado queda guardado en el sistema (con sus items adicionales).
