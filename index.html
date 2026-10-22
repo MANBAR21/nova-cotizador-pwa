@@ -193,6 +193,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 <div class="tabs">
   <div class="tab on" id="tab1" onclick="showTab(1)">📋 Cotizar</div>
   <div class="tab" id="tab2" onclick="showTab(2)">📅 Eventos cotizados</div>
+  <div class="tab" id="tab3" onclick="showTab(3)">💬 Soporte<span id="tkvBadge"></span></div>
 </div>
 
 <div id="t1">
@@ -473,6 +474,40 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 
   <div id="vzEstado" style="font-size:10.5px;color:#888;margin-bottom:8px"></div>
   <div id="vzLista"></div>
+</div>
+</div>
+
+<!-- TAB 3: SOPORTE Y SUGERENCIAS -->
+<div id="t3" style="display:none">
+<div class="card">
+  <div class="sec-label">Soporte y sugerencias</div>
+  <p id="tkvIntro" style="font-size:10.5px;color:#555;margin-bottom:10px">
+    Lo que se envía con el botón 💬 Soporte / Sugerencia.</p>
+
+  <div class="g3" style="margin-bottom:9px">
+    <div><label>Estado</label>
+      <select id="tkvEstado" onchange="tkvRepintar()">
+        <option value="pendientes">Pendientes</option>
+        <option value="resuelto">Resueltos</option>
+        <option value="descartado">Descartados</option>
+        <option value="todos">Todos</option>
+      </select></div>
+    <div><label>Tipo</label>
+      <select id="tkvTipo" onchange="tkvRepintar()">
+        <option value="">Todos</option>
+        <option value="soporte">🛠 Soporte</option>
+        <option value="sugerencia">💡 Sugerencia</option>
+      </select></div>
+    <div style="display:flex;align-items:end">
+      <button type="button" class="save-btn" style="width:100%" onclick="cargarTickets(true)">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div id="tkvResumen" style="font-size:10.5px;color:#888;margin-bottom:8px"></div>
+  <div id="tkvLista"></div>
+  <div style="text-align:center;margin-top:10px">
+    <button type="button" class="save-btn" onclick="abrirTicket()">💬 Enviar un ticket nuevo</button>
+  </div>
 </div>
 </div>
 
@@ -863,7 +898,7 @@ function togDesc(){descOn=!descOn;$('descNo').className=descOn?'':'on';$('descSi
 function recalcComision(){let pct=parseFloat($('comisionPct')?.value)||0;let el=$('comisionMonto');if(!el)return;if(pct>0){let base=parseInt($('prTotal')?.textContent?.replace(/[^0-9]/g,'')||0)||0;el.textContent=pct+'% sobre el subtotal';}else{el.textContent='';}}
 function _applyComision(rows,totalsObj){let pct=parseFloat($('comisionPct')?.value)||0;if(pct<=0)return;let f=1+pct/100;rows.forEach(r=>{if(r.sub!==undefined)r.sub=Math.round(r.sub*f);if(r.unit!==undefined)r.unit=Math.round(r.unit*f);});if(totalsObj){if(totalsObj.total!==undefined)totalsObj.total=Math.round(totalsObj.total*f);if(totalsObj.addlTotal!==undefined)totalsObj.addlTotal=Math.round(totalsObj.addlTotal*f);if(totalsObj.transpTotal!==undefined)totalsObj.transpTotal=Math.round(totalsObj.transpTotal*f);if(totalsObj.dayTotal!==undefined)totalsObj.dayTotal=Math.round(totalsObj.dayTotal*f);}}
 function togDescMode(){descPct=!descPct;$('dmPct').className=descPct?'on':'';$('dmVal').className=descPct?'':'on';$('descHint').textContent=descPct?'Ingresa el porcentaje (ej: 10 = 10%)':'Ingresa el valor en pesos';$('descAmt').placeholder=descPct?'ej: 10':'ej: 5000000';$('descCalc').textContent='—';}
-function showTab(n){$('tab1').className='tab'+(n===1?' on':'');$('tab2').className='tab'+(n===2?' on':'');$('t1').style.display=n===1?'':'none';$('t2').style.display=n===2?'':'none';if(n===2)cargarVisualizador();}
+function showTab(n){[1,2,3].forEach(i=>{const t=$('tab'+i),c=$('t'+i);if(t)t.className='tab'+(n===i?' on':'');if(c)c.style.display=n===i?'':'none';});if(n===2)cargarVisualizador();if(n===3&&typeof cargarTickets==='function')cargarTickets();}
 function onTipo(){let t=$('tipo').value;$('otroField').style.display=t==='otro'?'block':'none';let si=t==='corporativo'||t==='concierto';if(si!==ivaOn)togIva();}
 
 function getTipoLabel(){let t=$('tipo').value;return{boda:'Boda',grado:'Grado',social:'Social',corporativo:'Corporativo',concierto:'Concierto',otro:$('otroTipo').value||'Otro'}[t]||t;}
@@ -2078,6 +2113,57 @@ window._logoDataUrl=null;
   else img.addEventListener('load',()=>doConvert(img));
 })();
 
+// ── ENTREGAR UN ARCHIVO EXPORTADO (PDF / Excel / CSV) ───────────────────
+// En el teléfono, pdf.save() / writeFile abren el visor del navegador, y al
+// compartir desde ahí iOS manda el ENLACE de la página pegado al archivo (había
+// que borrarlo a mano cada vez). Por eso en el teléfono se comparte el archivo
+// solo, con la hoja de compartir del sistema y SIN title/text/url: si se pasa
+// cualquiera de esos, WhatsApp y Mail los adjuntan como texto.
+// En el computador se descarga como siempre.
+function _esTelefono(){try{return matchMedia('(pointer:coarse)').matches;}catch(e){return false;}}
+function descargarBlob(blob,nombre){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nombre;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+}
+async function entregarArchivo(blob,nombre,tipo){
+  let file=null;
+  try{file=new File([blob],nombre,{type:tipo});}catch(e){}
+  const puedeCompartir=file&&_esTelefono()&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]});
+  if(!puedeCompartir){descargarBlob(blob,nombre);return;}
+  try{await navigator.share({files:[file]});}
+  catch(e){
+    // AbortError = la persona cerró la hoja de compartir: no se hace nada.
+    // NotAllowedError = el navegador ya no cuenta el toque original (generar el
+    // PDF toma unos segundos): se pide un toque nuevo.
+    if(e&&e.name==='AbortError')return;
+    mostrarCompartirArchivo(file,blob);
+  }
+}
+function mostrarCompartirArchivo(file,blob){
+  let d=document.getElementById('novaCompartir'); if(d)d.remove();
+  d=document.createElement('div'); d.id='novaCompartir';
+  d.style.cssText='position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px';
+  d.innerHTML='<div style="background:#fff;border-radius:12px;padding:16px;width:100%;max-width:420px;font-family:Arial,sans-serif;box-sizing:border-box">'+
+    '<div style="font-weight:700;font-size:14px;margin-bottom:4px">Archivo listo</div>'+
+    '<div style="font-size:11.5px;color:#666;margin-bottom:12px;word-break:break-all"></div>'+
+    '<button type="button" data-a="share" style="width:100%;background:#2E9AB3;color:#fff;border:0;border-radius:7px;padding:12px;font-size:14px;font-weight:700;margin-bottom:7px;cursor:pointer">📤 Compartir</button>'+
+    '<button type="button" data-a="save" style="width:100%;background:#eef3f4;color:#2B6E7F;border:0;border-radius:7px;padding:11px;font-size:13px;font-weight:700;margin-bottom:7px;cursor:pointer">⬇️ Guardar en el teléfono</button>'+
+    '<button type="button" data-a="close" style="width:100%;background:none;color:#888;border:0;padding:8px;font-size:12px;cursor:pointer">Cerrar</button>'+
+  '</div>';
+  d.querySelector('div > div:nth-child(2)').textContent=file.name;
+  d.addEventListener('click',async ev=>{
+    const a=ev.target&&ev.target.dataset&&ev.target.dataset.a;
+    if(ev.target===d||a==='close'){d.remove();return;}
+    if(a==='save'){descargarBlob(blob,file.name);d.remove();return;}
+    if(a==='share'){
+      try{await navigator.share({files:[file]});d.remove();}
+      catch(e){if(!e||e.name!=='AbortError'){descargarBlob(blob,file.name);d.remove();}}
+    }
+  });
+  document.body.appendChild(d);
+}
+
 // ── EXPORT PDF (html2canvas + jsPDF — colores exactos, logo y tabla) ──
 async function exportPDF(){
   let btn=event.currentTarget;btn.textContent='⏳ Generando...';btn.disabled=true;
@@ -2227,7 +2313,7 @@ async function exportPDF(){
       pdf.addImage(tmp.toDataURL('image/jpeg',0.97),'JPEG',mg,mg,cW,(chunk/canvas.width)*cW);
       y0=y1;primera=false;
     }
-    pdf.save(getFilename()+'.pdf');
+    entregarArchivo(pdf.output('blob'),getFilename()+'.pdf','application/pdf');
     // Todo PDF generado queda guardado en el sistema (con sus items adicionales).
     try{await guardarEnSistema();}catch(e){console.error(e);}
     // Antes esto disparaba saveQuote() para dejar el .json al lado del PDF y
@@ -2435,7 +2521,9 @@ function _doExcel(){
 
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Cotización Nova');
-  XLSX.writeFile(wb,getFilename()+'.xlsx');
+  const xbuf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  entregarArchivo(new Blob([xbuf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+                  getFilename()+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
 // ── EXPORT CSV (siempre funciona, sin internet) ────────
@@ -2499,7 +2587,7 @@ function exportCSV(){
   lines.push(',,TOTAL,'+grand+pad);
   if(!ivaOn)lines.push('* Esta cotización no incluye IVA.,,,'+pad);
   let blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-  let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=getFilename()+'.csv';a.click();
+  entregarArchivo(blob,getFilename()+'.csv','text/csv');
 }
 
 // ── COMPETITOR ────────────────────────────────────────
@@ -2901,6 +2989,9 @@ async function salir(){
   if(pend>0&&!confirm('Tienes '+pend+' cotización(es) sin sincronizar. Si cierras sesión se quedan en este dispositivo hasta que vuelvas a entrar. ¿Continuar?'))return false;
   try{if(sb)await sb.auth.signOut();}catch(e){}
   borrarIdentidad();
+  // Los tickets cacheados son de esta cuenta (si es admin, los de todos): no
+  // se dejan para quien entre después en el mismo dispositivo.
+  try{localStorage.removeItem('novaTicketsCache');}catch(e){}
   location.reload();
   return true;
 }
@@ -3279,7 +3370,8 @@ async function enviarTicket(){
   try{
     if(!navigator.onLine||!(await refrescarSesion()))throw new Error('offline');
     await _enviarTicketRPC(p);
-    est.textContent='✅ Enviado, gracias.';est.style.color='#2E9AB3';
+    est.textContent='✅ Enviado, gracias. La respuesta te llega en la pestaña 💬 Soporte.';est.style.color='#2E9AB3';
+    tkvActualizarBadge();
   }catch(e){
     const q=getTicketQueue();q.push(p);setTicketQueue(q);
     est.textContent='⚠️ Guardado en este dispositivo; se enviará solo al reconectar/entrar.';est.style.color='#c98a00';
@@ -3294,7 +3386,188 @@ async function flushTicketQueue(){
   setTicketQueue(rest);
 }
 window.addEventListener('online',flushTicketQueue);
-window.addEventListener('load',()=>setTimeout(flushTicketQueue,2500));
+window.addEventListener('load',()=>setTimeout(()=>{flushTicketQueue().finally(tkvActualizarBadge);},2500));
+
+// ── VISTA DE TICKETS (pestaña 💬 Soporte) ────────────────────────────────
+// Lee y responde por funciones (migración 014); la tabla no se toca directo.
+// La base decide quién ve qué: el admin ve todos y responde; los demás ven
+// solo los suyos con la respuesta. Aquí `admin` solo cambia la interfaz.
+// Sin señal se muestra lo último que se vio; responder sí necesita red.
+const TKV_CACHE='novaTicketsCache';
+const TKV_ESTADO={abierto:'🟡 Abierto',en_proceso:'🔵 En proceso',resuelto:'🟢 Resuelto',descartado:'⚪ Descartado'};
+const TKV_ORDEN={abierto:0,en_proceso:1,resuelto:2,descartado:3};
+let _tkv={filas:null,admin:false,desdeCache:false,en:null};
+
+function tkvEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function tkvFecha(iso){
+  if(!iso)return '';
+  try{return new Date(iso).toLocaleString('es-CO',{timeZone:'America/Bogota',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});}
+  catch(e){return iso.slice(0,16).replace('T',' ');}
+}
+function tkvLeerCache(){try{return JSON.parse(localStorage.getItem(TKV_CACHE)||'null');}catch(e){return null;}}
+
+function tkvPintarBadge(filas,admin){
+  const b=$('tkvBadge'); if(!b)return;
+  const n=!filas?0:admin
+    ? filas.filter(r=>r.estado==='abierto').length
+    : filas.filter(r=>r.respuesta_nueva).length;
+  b.innerHTML=n?' <span style="background:#E07020;color:#fff;border-radius:9px;padding:0 6px;font-size:10px;font-weight:700">'+n+'</span>':'';
+}
+
+// Trae la lista (o la cacheada) y la deja en _tkv. Devuelve true si vino de la red.
+async function tkvTraer(){
+  const cache=tkvLeerCache();
+  if(!identidadCacheada()){_tkv={filas:null,admin:false,desdeCache:false,en:null};return false;}
+  if(!navigator.onLine||!(await refrescarSesion())){
+    _tkv=cache?{filas:cache.filas,admin:!!cache.admin,desdeCache:true,en:cache.en}:{filas:null,admin:false,desdeCache:true,en:null};
+    return false;
+  }
+  const sb=getSb();
+  let admin=false;
+  try{const r=await sb.rpc('soy_admin'); admin=!r.error&&r.data===true;}catch(e){}
+  const{data,error}=await sb.rpc('listar_tickets_soporte',{p_solo_mios:false});
+  if(error)throw error;
+  const en=new Date().toISOString();
+  try{localStorage.setItem(TKV_CACHE,JSON.stringify({filas:data,admin,en}));}catch(e){}
+  _tkv={filas:data||[],admin,desdeCache:false,en};
+  return true;
+}
+
+async function tkvActualizarBadge(){
+  try{await tkvTraer();}catch(e){}
+  tkvPintarBadge(_tkv.filas,_tkv.admin);
+}
+
+async function cargarTickets(){
+  const res=$('tkvResumen'), cont=$('tkvLista');
+  if(!identidadCacheada()){
+    res.textContent='';
+    cont.innerHTML='<p style="font-size:11.5px;color:#555">Entra con tu cuenta para ver tus tickets y las respuestas. '+
+      '<a href="#" onclick="mostrarLogin();return false" style="color:#2E9AB3">Entrar</a></p>';
+    tkvPintarBadge(null,false);
+    return;
+  }
+  res.style.color='#888'; res.textContent='Cargando...';
+  let deRed=false;
+  try{ deRed=await tkvTraer(); }
+  catch(e){
+    const c=tkvLeerCache();
+    _tkv=c?{filas:c.filas,admin:!!c.admin,desdeCache:true,en:c.en}:{filas:null,admin:false,desdeCache:true,en:null};
+    if(!c){res.style.color='#C0392B';res.textContent='No se pudo cargar: '+(e&&e.message||e);cont.innerHTML='';return;}
+  }
+  tkvRepintar();
+  // Quien abrió el ticket ya vio la respuesta: se apaga el aviso en la base,
+  // pero en esta pantalla se deja la etiqueta "Nueva" hasta que recargue.
+  if(deRed&&_tkv.filas&&_tkv.filas.some(r=>r.respuesta_nueva)){
+    try{await getSb().rpc('marcar_respuestas_vistas');}catch(e){}
+    _tkv.filas.forEach(r=>{if(r.respuesta_nueva)r._eraNueva=true;r.respuesta_nueva=false;});
+    try{localStorage.setItem(TKV_CACHE,JSON.stringify({filas:_tkv.filas,admin:_tkv.admin,en:_tkv.en}));}catch(e){}
+  }
+  tkvPintarBadge(_tkv.filas,_tkv.admin);
+}
+
+function tkvRepintar(){
+  const res=$('tkvResumen'), cont=$('tkvLista'), intro=$('tkvIntro');
+  if(!cont)return;
+  const admin=_tkv.admin;
+  intro.textContent=admin
+    ? 'Todo lo que llega del botón 💬 Soporte / Sugerencia. Responde aquí: quien lo envió ve la respuesta en esta misma pestaña.'
+    : 'Lo que has enviado con el botón 💬 Soporte / Sugerencia, y la respuesta cuando llegue.';
+
+  const fe=$('tkvEstado').value, ft=$('tkvTipo').value;
+  let f=(_tkv.filas||[]).slice();
+  if(fe==='pendientes')f=f.filter(r=>r.estado==='abierto'||r.estado==='en_proceso');
+  else if(fe!=='todos')f=f.filter(r=>r.estado===fe);
+  if(ft)f=f.filter(r=>r.tipo===ft);
+  f.sort((a,b)=>(TKV_ORDEN[a.estado]-TKV_ORDEN[b.estado])||(a.created_at<b.created_at?1:-1));
+
+  // Los que siguen en la cola de este dispositivo (sin señal o sin sesión).
+  const cola=getTicketQueue();
+  let html='';
+  if(cola.length){
+    html+='<div style="border:0.5px dashed #c98a00;border-radius:6px;padding:8px 11px;margin-bottom:8px;background:#fffaf0;font-size:10.5px;color:#8a6200">'+
+      '⏳ '+cola.length+' ticket(s) guardado(s) en este dispositivo, sin enviar todavía. Se envían solos al tener señal y sesión.'+
+      cola.map(p=>'<div style="margin-top:4px;color:#555">· '+tkvEsc((p.mensaje||'').slice(0,120))+'</div>').join('')+
+    '</div>';
+  }
+
+  const tot=_tkv.filas||[];
+  const abiertos=tot.filter(r=>r.estado==='abierto').length, enProc=tot.filter(r=>r.estado==='en_proceso').length;
+  res.style.color=_tkv.desdeCache?'#c98a00':'#888';
+  res.textContent=(_tkv.desdeCache
+    ? (_tkv.en?'Lo último que se vio el '+tkvFecha(_tkv.en)+' — sin conexión. ':'Sin conexión y sin nada guardado de antes. ')
+    : '')+(tot.length?abiertos+' abierto(s) · '+enProc+' en proceso · '+tot.length+' en total':'');
+
+  if(!f.length){
+    cont.innerHTML=html+'<p style="font-size:11px;color:#888">'+(tot.length?'Nada con este filtro.':'Todavía no hay tickets.')+'</p>';
+    return;
+  }
+
+  cont.innerHTML=html+f.map(r=>{
+    const ctx=r.contexto||{};
+    const meta=[
+      admin&&!r.es_mio?'De <b>'+tkvEsc(r.usuario_nombre||'—')+'</b>':(r.es_mio&&admin?'Tuyo':''),
+      r.cliente?'Cliente: '+tkvEsc(r.cliente):'',
+      ctx.sala?'Sala: '+tkvEsc(ctx.sala):'',
+      r.cotizacion_id?'<a href="#" class="tkvCot" data-id="'+(+r.cotizacion_id)+'" style="color:#2E9AB3;text-decoration:none">Cotización #'+(+r.cotizacion_id)+' ↗</a>':''
+    ].filter(Boolean).join(' · ');
+    const nueva=r.respuesta_nueva||r._eraNueva;
+    const respLeida=r.respuesta
+      ? '<div style="margin-top:7px;border-left:3px solid #2E9AB3;background:#f2f9fb;padding:6px 9px;border-radius:0 5px 5px 0">'+
+          '<div style="font-size:9.5px;color:#2B6E7F;font-weight:700;margin-bottom:2px">Respuesta'+
+            (r.respondido_por_nombre?' de '+tkvEsc(r.respondido_por_nombre):'')+
+            (r.respondido_en?' · '+tkvFecha(r.respondido_en):'')+
+            (nueva?' <span style="background:#E07020;color:#fff;border-radius:8px;padding:0 5px;margin-left:3px">Nueva</span>':'')+
+          '</div>'+
+          '<div style="font-size:11.5px;color:#222;white-space:pre-wrap">'+tkvEsc(r.respuesta)+'</div>'+
+        '</div>'
+      : (admin?'':'<div style="margin-top:6px;font-size:10px;color:#aaa">Sin respuesta todavía.</div>');
+    const editor=admin
+      ? '<div style="margin-top:8px">'+
+          '<textarea id="tkvR'+r.id+'" placeholder="Escribe la respuesta (la ve quien lo envió)" '+
+            'style="width:100%;box-sizing:border-box;min-height:60px;font-size:11.5px;padding:6px 8px;border:0.5px solid #ccc;border-radius:5px;font-family:inherit;resize:vertical">'+
+            tkvEsc(r.respuesta||'')+'</textarea>'+
+          '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap">'+
+            '<select id="tkvE'+r.id+'" style="flex:1;min-width:120px;font-size:11px;padding:5px">'+
+              Object.keys(TKV_ESTADO).map(k=>'<option value="'+k+'"'+(k===r.estado?' selected':'')+'>'+TKV_ESTADO[k]+'</option>').join('')+
+            '</select>'+
+            '<button type="button" class="save-btn tkvGuardar" data-id="'+r.id+'" style="flex:0 0 auto">Guardar</button>'+
+            (r.estado!=='resuelto'?'<button type="button" class="save-btn tkvResolver" data-id="'+r.id+'" style="flex:0 0 auto;background:#2E9AB3">✓ Responder y resolver</button>':'')+
+          '</div>'+
+          '<div id="tkvM'+r.id+'" style="font-size:10px;min-height:12px;margin-top:3px"></div>'+
+        '</div>'
+      : '';
+    return '<div style="border:0.5px solid '+(nueva?'#E07020':'#e2e6e8')+';border-radius:6px;padding:9px 11px;margin-bottom:7px;background:#fff">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
+        '<span style="font-weight:700;font-size:12px">'+(r.tipo==='sugerencia'?'💡 Sugerencia':'🛠 Soporte')+' <span style="color:#aaa;font-weight:400">#'+(+r.id)+'</span></span>'+
+        '<span style="font-size:10.5px">'+(TKV_ESTADO[r.estado]||tkvEsc(r.estado))+'</span>'+
+      '</div>'+
+      '<div style="font-size:10px;color:#888;margin-top:2px">'+tkvFecha(r.created_at)+(meta?' · '+meta:'')+'</div>'+
+      '<div style="font-size:11.5px;color:#222;margin-top:6px;white-space:pre-wrap">'+tkvEsc(r.mensaje)+'</div>'+
+      (admin
+        ? (r.respondido_en?'<div style="font-size:9.5px;color:#2B6E7F;margin-top:6px">Respondido'+
+            (r.respondido_por_nombre?' por '+tkvEsc(r.respondido_por_nombre):'')+' · '+tkvFecha(r.respondido_en)+'</div>':'')
+        : respLeida)+
+      editor+
+    '</div>';
+  }).join('');
+
+  cont.querySelectorAll('.tkvCot').forEach(a=>{a.onclick=ev=>{ev.preventDefault();showTab(1);abrirCotizacion(+a.dataset.id);};});
+  cont.querySelectorAll('.tkvGuardar').forEach(b=>{b.onclick=()=>tkvGuardar(+b.dataset.id);});
+  cont.querySelectorAll('.tkvResolver').forEach(b=>{b.onclick=()=>tkvGuardar(+b.dataset.id,'resuelto');});
+}
+
+async function tkvGuardar(id,estadoForzado){
+  const msg=$('tkvM'+id), resp=$('tkvR'+id).value, estado=estadoForzado||$('tkvE'+id).value;
+  if(estadoForzado==='resuelto'&&!resp.trim()){msg.style.color='#C0392B';msg.textContent='Escribe la respuesta antes de resolver.';return;}
+  if(!navigator.onLine||!(await refrescarSesion())){msg.style.color='#C0392B';msg.textContent='Responder necesita conexión y sesión activa.';return;}
+  msg.style.color='#888'; msg.textContent='Guardando...';
+  try{
+    const{error}=await getSb().rpc('responder_ticket_soporte',{p_id:id,p_estado:estado,p_respuesta:resp});
+    if(error)throw error;
+    await cargarTickets();
+  }catch(e){msg.style.color='#C0392B';msg.textContent='No se pudo guardar: '+(e&&e.message||e);}
+}
 </script>
 </body>
 </html>
