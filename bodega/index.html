@@ -159,8 +159,10 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 
 /* Ingreso */
 .ingreso{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px;max-width:420px;margin:0 auto}
-.ingreso .marca{margin-bottom:28px}
-.ingreso .marca .cinta .codigo{font-size:40px}
+.ingreso .marca{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:8px}
+.ingreso .marca img{height:150px;width:auto}
+.ingreso .marca span{font-family:var(--cond);font-weight:700;font-size:26px;letter-spacing:6px;text-transform:uppercase;color:var(--grafito);border-top:3px solid var(--cinta);padding-top:6px}
+.ingreso p{text-align:center}
 .ingreso p{color:var(--gris);margin:14px 0 22px;font-size:16px}
 .msg{min-height:22px;font-size:15px;margin-top:10px;color:var(--dano)}
 
@@ -198,13 +200,28 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 <!-- INGRESO -->
 <section id="vIngreso" class="oculto">
   <div class="ingreso">
-    <div class="marca"><div class="cinta" style="--area:var(--nova)"><div class="franja"></div><div class="codigo">BODEGA NOVA</div></div></div>
+    <div class="marca"><img src="logo-nova.png" alt="Nova Corp Productions"/><span>Bodega</span></div>
     <p>Entre con el correo y la contraseña que le dio la oficina. Solo se hace una vez en este celular.</p>
     <form id="fIngreso">
       <label class="campo"><span>Correo</span><input id="inCorreo" type="email" autocomplete="username" required/></label>
       <label class="campo"><span>Contraseña</span><input id="inClave" type="password" autocomplete="current-password" required/></label>
       <button class="btn btn-primario" type="submit" id="btnIngresar">Entrar</button>
       <div class="msg" id="msgIngreso" role="alert"></div>
+      <button type="button" class="btn btn-texto" id="btnOlvido">¿Olvidó su contraseña?</button>
+    </form>
+  </div>
+</section>
+
+<!-- ELEGIR CONTRASEÑA (llega desde el correo de recuperación o invitación) -->
+<section id="vClave" class="oculto">
+  <div class="ingreso">
+    <div class="marca"><img src="logo-nova.png" alt="Nova Corp Productions"/><span>Bodega</span></div>
+    <p>Elija su contraseña nueva. Es la que va a usar de ahora en adelante para entrar a la app y al cotizador.</p>
+    <form id="fClave">
+      <label class="campo"><span>Contraseña nueva (mínimo 8 caracteres)</span><input id="inClaveA" type="password" autocomplete="new-password" required/></label>
+      <label class="campo"><span>Repítala</span><input id="inClaveB" type="password" autocomplete="new-password" required/></label>
+      <button class="btn btn-primario" type="submit" id="btnClave">Guardar y entrar</button>
+      <div class="msg" id="msgClave" role="alert"></div>
     </form>
   </div>
 </section>
@@ -362,6 +379,8 @@ const AREAS={ILU:'Iluminación',SON:'Sonido',VID:'Video',EST:'Estructura y riggi
 const AREA_DE_EQUIPO={'Iluminación':'ILU','Sonido':'SON','Video':'VID','Estructura y rigging':'EST','Energía':'ENE','Efectos especiales':'EFX'};
 const RE_CODIGO=/^(ILU|SON|VID|EST|ENE)-\d{2}$/;
 
+// Si se llega desde el correo de recuperación o invitación, hay que pedir contraseña nueva.
+const LLEGO_DE_CORREO=/type=(recovery|invite|signup)/.test(location.hash||'');
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -434,7 +453,8 @@ window.addEventListener('offline',pintarCola);
 // ── Sesión ─────────────────────────────────────────────────────
 async function iniciar(){
   const {data}=await sb.auth.getSession();
-  if(!data.session){mostrar('ingreso');return;}
+  if(data.session&&LLEGO_DE_CORREO){mostrar('clave');return;}
+  if(!data.session){mostrar('ingreso');if(LLEGO_DE_CORREO)$('msgIngreso').textContent='El enlace del correo ya no sirve (vence a la hora). Escriba su correo y toque «¿Olvidó su contraseña?» para recibir otro.';return;}
   try{await cargarYo();}catch(e){
     if(e.message==='sin_permiso'){await sb.auth.signOut();mostrar('ingreso');$('msgIngreso').textContent='Este usuario no tiene acceso a bodega. Pídale a Camilo que se lo active.';return;}
     // Sin señal: se sigue con la identidad guardada del último ingreso.
@@ -470,7 +490,34 @@ $('btnSalir').onclick=async()=>{
   if(n&&!confirm(`Hay ${n} rack(s) sin enviar. Si cierra la sesión, se quedan guardados en este celular y se envían al volver a entrar. ¿Cerrar sesión?`))return;
   await sb.auth.signOut(); localStorage.removeItem('bodegaYo'); mostrar('ingreso');
 };
-function mostrar(v){$('vIngreso').classList.toggle('oculto',v!=='ingreso');$('vApp').classList.toggle('oculto',v!=='app');}
+function mostrar(v){$('vIngreso').classList.toggle('oculto',v!=='ingreso');$('vClave').classList.toggle('oculto',v!=='clave');$('vApp').classList.toggle('oculto',v!=='app');}
+sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY')mostrar('clave');});
+$('btnOlvido').onclick=async()=>{
+  const m=$('msgIngreso'), correo=$('inCorreo').value.trim();
+  m.style.color='var(--dano)';
+  if(!correo){m.textContent='Escriba arriba su correo y vuelva a tocar «¿Olvidó su contraseña?».';$('inCorreo').focus();return;}
+  const b=$('btnOlvido'); b.disabled=true;
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(correo,{redirectTo:location.origin+location.pathname});
+    if(error)throw error;
+    m.style.color='var(--ok)';
+    m.textContent=`Le enviamos un correo a ${correo} con un enlace para elegir una contraseña nueva. Ábralo en este mismo celular.`;
+  }catch(e){m.textContent=/rate|seconds/i.test(e.message)?'Ya se envió un correo hace poco. Espere un minuto y vuelva a intentar.':'No se pudo enviar el correo: '+e.message;}
+  finally{b.disabled=false;}
+};
+$('fClave').onsubmit=async ev=>{
+  ev.preventDefault(); const a=$('inClaveA').value,b=$('inClaveB').value,m=$('msgClave'),btn=$('btnClave');
+  if(a.length<8){m.textContent='Use al menos 8 caracteres.';return;}
+  if(a!==b){m.textContent='Las dos contraseñas no coinciden.';return;}
+  btn.disabled=true;btn.textContent='Guardando…';
+  try{
+    const {error}=await sb.auth.updateUser({password:a}); if(error)throw error;
+    history.replaceState(null,'',location.pathname);
+    try{await cargarYo();}catch(e){if(e.message==='sin_permiso'){await sb.auth.signOut();mostrar('ingreso');$('msgIngreso').textContent='Contraseña guardada, pero este usuario no tiene acceso a bodega. Pídale a Camilo que se lo active.';return;}}
+    mostrar('app'); irInicio(); procesarCola(); aviso('Contraseña guardada.');
+  }catch(e){m.textContent='No se pudo guardar: '+e.message;}
+  finally{btn.disabled=false;btn.textContent='Guardar y entrar';}
+};
 
 // ── Datos ──────────────────────────────────────────────────────
 async function cargarEquipos(){

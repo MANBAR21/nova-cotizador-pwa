@@ -6,7 +6,7 @@
 // Cambie CACHE_NAME en cada publicación (o use el script de despliegue del
 // cotizador, que lo calcula con un hash); si no cambia, los celulares que ya
 // tienen la app instalada se quedan con la versión vieja.
-const CACHE_NAME = 'nova-bodega-v4';
+const CACHE_NAME = 'nova-bodega-v5';
 
 const APP_SHELL = [
   './',
