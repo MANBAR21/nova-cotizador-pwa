@@ -3569,10 +3569,10 @@ async function tkvGuardar(id,estadoForzado){
   }catch(e){msg.style.color='#C0392B';msg.textContent='No se pudo guardar: '+(e&&e.message||e);}
 }
 </script>
-<!-- ══ Selector de apps de Nova (solo administradores) ══════════════════
+<!-- ══ Selector de apps de Nova (administración y gerencia) ═════════════
      Bloque independiente: no toca nada del cotizador. Muestra un botón junto
      al título para pasar a las otras apps de NOVA DASH (por ahora, Bodega).
-     Solo aparece si el usuario es admin (función soy_admin de la base); sin
+     Solo aparece para los roles admin y gerente (función bod_yo); sin
      señal usa lo último que supo de ese mismo correo. Para agregar otra app,
      sume una línea en NOVA_APPS. -->
 <style>
@@ -3615,8 +3615,9 @@ async function tkvGuardar(id,estadoForzado){
     try{
       const sb=getSb(); if(!sb)return;
       const s=await sb.auth.getSession(); if(!s.data||!s.data.session)return;
-      const r=await sb.rpc('soy_admin'); if(r.error)return;
-      const admin=r.data===true;
+      // Rol de quien entró: el botón es para administración y gerencia.
+      const r=await sb.rpc('bod_yo'); if(r.error)return;
+      const admin=!!(r.data&&['admin','gerente'].includes(r.data.rol));
       try{localStorage.setItem(CLAVE,JSON.stringify({email:correo,admin}));}catch(e){}
       mostrar(admin);
     }catch(e){}

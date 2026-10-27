@@ -339,7 +339,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
   </div>
 </div>
 
-<!-- Cambiar de app (solo administradores) -->
+<!-- Cambiar de app (solo administración y gerencia) -->
 <div class="hoja oculto" id="hojaApps" role="dialog" aria-modal="true" aria-labelledby="tHojaApps">
   <div class="caja">
     <div class="cab-hoja"><h2 id="tHojaApps">Apps de Nova</h2><button class="btn-texto" data-cerrar>Cerrar</button></div>
@@ -565,7 +565,7 @@ async function irInicio(){
   rack=null;
   $('vInicio').classList.remove('oculto');$('vRack').classList.add('oculto');$('pieRack').classList.add('oculto');$('btnAtras').classList.add('oculto');
   $('quien').innerHTML=yo?esc(yo.nombre):'';
-  $('btnApps').classList.toggle('oculto',!(yo&&yo.rol==='admin'));
+  $('btnApps').classList.toggle('oculto',!(yo&&['admin','gerente'].includes(yo.rol)));
   window.scrollTo(0,0);
   racks=JSON.parse(localStorage.getItem('bodegaRacks')||'[]');
   pintarInicio(); pintarCola();
@@ -900,7 +900,7 @@ $('btnImprimirTodos').onclick=async()=>{
   imprimirHojas(lista.map(x=>({codigo:x.codigo,items:r.data.filter(c=>c.rack_codigo===x.codigo)})));
 };
 
-// ── Cambiar de app (solo para administradores) ─────────────────
+// ── Cambiar de app (solo administración y gerencia) ────────────
 // Las apps de NOVA DASH que viven en el mismo sitio. Para agregar otra,
 // sume una línea con su nombre, dirección e ícono.
 const APPS=[
