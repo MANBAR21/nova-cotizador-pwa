@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#1F2A30"/>
+<title>Bodega Nova</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon-192.png"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<style>
+@font-face{font-family:"Barlow Condensed";font-weight:600;font-display:swap;src:url(vendor/fonts/barlow-condensed-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(vendor/fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(vendor/fonts/barlow-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:500;font-display:swap;src:url(vendor/fonts/barlow-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-display:swap;src:url(vendor/fonts/barlow-latin-600-normal.woff2) format("woff2")}
+
+:root{
+  --aluminio:#E9ECEE; --panel:#FFFFFF; --linea:#CBD1D6; --grafito:#1F2A30; --gris:#5E6B73;
+  --nova:#2E9AB3; --nova-osc:#1F7A8F; --cinta:#F2C230; --cinta-borde:#D9A912;
+  --dano:#C8372D; --dano-fondo:#FBE9E7; --ok:#2F8F5B; --ok-fondo:#E3F2E9;
+  --ILU:#B45309; --SON:#1D4ED8; --VID:#7C3AED; --EST:#047857; --ENE:#B91C1C;
+  --cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --texto:"Barlow",Arial,sans-serif;
+  --radio:10px; --toque:56px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--aluminio);color:var(--grafito);font-family:var(--texto);font-size:17px;line-height:1.35;-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--nova);outline-offset:2px}
+.oculto{display:none!important}
+
+/* Barra superior */
+.barra{position:sticky;top:0;z-index:20;background:var(--grafito);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px}
+.barra h1{font-family:var(--cond);font-weight:700;font-size:22px;letter-spacing:.5px;text-transform:uppercase;flex:1}
+.barra h1 span{color:var(--cinta)}
+.barra .quien{font-size:14px;color:#C9D2D8;text-align:right;line-height:1.2}
+.barra .atras{color:#fff;font-size:28px;line-height:1;width:44px;height:44px;margin-left:-8px;border-radius:8px}
+
+main{max-width:560px;margin:0 auto;padding:16px}
+.seccion{margin-top:22px}
+.titulo-sec{font-family:var(--cond);font-weight:700;font-size:15px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gris);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.tarjeta{background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:14px}
+
+/* Botones */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:var(--toque);padding:0 18px;border-radius:var(--radio);font-weight:600;font-size:18px;width:100%}
+.btn-primario{background:var(--nova);color:#fff}
+.btn-primario:active{background:var(--nova-osc)}
+.btn-primario[disabled]{background:#9DB4BB}
+.btn-borde{background:var(--panel);border:2px solid var(--grafito);color:var(--grafito)}
+.btn-texto{color:var(--nova-osc);min-height:48px;font-weight:600}
+.btn-escanear{min-height:150px;flex-direction:column;font-family:var(--cond);font-size:30px;letter-spacing:.5px;text-transform:uppercase;background:var(--grafito);color:#fff;border-radius:14px}
+.btn-escanear svg{width:58px;height:58px}
+.pie{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(233,236,238,.96);border-top:1px solid var(--linea);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.pie .dentro{max-width:560px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.pie .resumen{font-size:14px;color:var(--gris);min-width:96px;line-height:1.2}
+.pie .resumen b{display:block;font-size:20px;color:var(--grafito);font-family:var(--cond)}
+
+/* Cinta: el código del rack, como se rotula en bodega */
+.cinta{position:relative;display:inline-flex;align-items:stretch;background:var(--cinta);border:1px solid var(--cinta-borde);box-shadow:0 2px 0 rgba(0,0,0,.12);transform:rotate(-1.2deg);clip-path:polygon(2% 0,98% 3%,100% 50%,97% 100%,1% 97%,0 52%)}
+.cinta .franja{width:12px;background:var(--area,var(--grafito))}
+.cinta .codigo{font-family:var(--cond);font-weight:700;letter-spacing:2px;padding:4px 16px 2px 12px;color:#111;font-size:48px;line-height:1}
+.cinta.chica{transform:rotate(-1deg)}
+.cinta.chica .codigo{font-size:24px;padding:2px 10px 0 8px;letter-spacing:1px}
+.cinta.chica .franja{width:7px}
+.cabecera-rack{display:flex;align-items:center;gap:14px;margin:6px 0 4px}
+.cabecera-rack .area{font-family:var(--cond);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:1px;color:var(--area)}
+.cabecera-rack .estado{font-size:14px;color:var(--gris)}
+
+/* Formularios */
+label.campo{display:block;margin-bottom:14px}
+label.campo>span{display:block;font-size:14px;font-weight:600;color:var(--gris);margin-bottom:5px}
+input[type=text],input[type=email],input[type=password],input[type=search],textarea{width:100%;min-height:52px;padding:12px 14px;border:1.5px solid var(--linea);border-radius:8px;background:#fff;font-size:18px}
+textarea{min-height:76px;resize:vertical}
+input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 0 3px rgba(46,154,179,.18)}
+.segmento{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.segmento button{min-height:50px;border-radius:8px;border:1.5px solid var(--linea);background:#fff;font-weight:600;font-size:15px}
+.segmento button[aria-pressed=true]{background:var(--grafito);border-color:var(--grafito);color:#fff}
+
+/* Contador +/- */
+.contador{display:flex;align-items:center;gap:6px}
+.contador button{width:52px;height:52px;border-radius:8px;background:var(--aluminio);border:1.5px solid var(--linea);font-size:28px;font-weight:600;line-height:1}
+.contador output{min-width:56px;text-align:center;font-family:var(--cond);font-weight:700;font-size:32px}
+.fila-contador{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+.fila-contador .nombre{font-weight:600;font-size:16px}
+.fila-contador .ayuda{font-size:13px;color:var(--gris)}
+
+/* Fotos */
+.fotos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.foto-tile{position:relative;aspect-ratio:4/3;border-radius:var(--radio);border:2px dashed #9AA6AD;background:#F4F6F7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;font-weight:600;color:var(--grafito)}
+.foto-tile svg{width:34px;height:34px}
+.foto-tile small{font-weight:400;color:var(--gris);font-size:13px}
+.foto-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.foto-tile.lista{border:2px solid var(--ok)}
+.foto-tile .sello{position:absolute;left:8px;bottom:8px;background:var(--ok);color:#fff;font-size:13px;font-weight:600;padding:3px 8px;border-radius:20px}
+.foto-tile .sello.nube{background:var(--grafito)}
+.mini-fotos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.mini-fotos img{width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--linea)}
+
+/* Contenido del rack */
+.equipo{background:var(--panel);border:1px solid var(--linea);border-left:6px solid var(--area,var(--grafito));border-radius:var(--radio);padding:12px 14px;margin-bottom:10px}
+.equipo.con-dano{border-left-color:var(--dano)}
+.equipo .cab{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.equipo .ref{font-family:var(--cond);font-weight:700;font-size:16px;color:var(--gris)}
+.equipo .nom{font-weight:600;font-size:16px;line-height:1.25}
+.equipo .quitar{color:var(--dano);font-size:14px;font-weight:600;min-height:40px;padding:0 4px}
+.equipo .extra{margin-top:8px;border-top:1px solid #E3E7EA;padding-top:10px}
+.aviso-dano{background:var(--dano-fondo);color:var(--dano);border-radius:8px;padding:10px 12px;font-size:15px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.aviso-dano button{color:var(--dano);border:1.5px solid var(--dano);border-radius:8px;min-height:44px;padding:0 12px;font-weight:600;background:#fff;white-space:nowrap}
+
+/* Lista de racks en inicio */
+.filtros{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px}
+.filtros button{flex:none;min-height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--linea);background:#fff;font-weight:600;font-size:14px}
+.filtros button[aria-pressed=true]{background:var(--grafito);color:#fff;border-color:var(--grafito)}
+.rack-fila{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:12px;margin-bottom:8px;min-height:68px}
+.rack-fila .info{flex:1;min-width:0}
+.rack-fila .info b{display:block;font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rack-fila .info small{color:var(--gris);font-size:14px}
+.pastilla{font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.pastilla.ok{background:var(--ok-fondo);color:var(--ok)}
+.pastilla.falta{background:#FFF4D6;color:#8A6400}
+.vacio{text-align:center;color:var(--gris);padding:26px 10px;font-size:15px}
+.cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.cifras div{background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:10px;text-align:center}
+.cifras b{display:block;font-family:var(--cond);font-size:30px;line-height:1}
+.cifras span{font-size:13px;color:var(--gris)}
+
+/* Avisos */
+.banda{border-radius:var(--radio);padding:12px 14px;font-size:15px;margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banda.pendiente{background:#FFF4D6;color:#6B4E00;border:1px solid #F0D58A}
+.banda.error{background:var(--dano-fondo);color:var(--dano);border:1px solid #F1C2BD}
+.banda button{font-weight:600;color:inherit;text-decoration:underline;min-height:40px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:60;max-width:528px;margin:0 auto;background:var(--grafito);color:#fff;border-radius:var(--radio);padding:14px 16px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);transform:translateY(20px);opacity:0;transition:all .2s}
+.toast.ver{transform:none;opacity:1}
+.toast.mal{background:var(--dano)}
+
+/* Hojas (selector de equipos, escribir código) */
+.hoja{position:fixed;inset:0;z-index:50;background:rgba(17,24,28,.55);display:flex;align-items:flex-end}
+.hoja .caja{background:var(--aluminio);width:100%;max-height:92vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.hoja .cab-hoja{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hoja .cab-hoja h2{font-family:var(--cond);font-size:24px;text-transform:uppercase;letter-spacing:.5px}
+.hoja .cuerpo{overflow-y:auto;padding:0 16px 16px}
+.opcion{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--linea);border-radius:8px;padding:12px;margin-bottom:6px;min-height:56px}
+.opcion b{display:block;font-weight:600;font-size:15px}
+.opcion small{color:var(--gris);font-size:13px}
+.grupo-lista{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gris);font-size:14px;margin:14px 0 6px}
+.teclado-cod{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.teclado-cod button{min-height:54px;border-radius:8px;border:1.5px solid var(--linea);background:#fff;font-family:var(--cond);font-weight:700;font-size:20px}
+.teclado-cod button[aria-pressed=true]{background:var(--grafito);color:#fff}
+
+/* Escáner */
+.escaner{position:fixed;inset:0;z-index:70;background:#000;display:flex;flex-direction:column}
+.escaner video{flex:1;width:100%;object-fit:cover}
+.escaner .marco{position:absolute;left:50%;top:42%;width:68vw;max-width:320px;aspect-ratio:1;transform:translate(-50%,-50%);border:4px solid var(--cinta);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+.escaner .texto{position:absolute;left:0;right:0;top:calc(42% + min(34vw,160px) + 18px);text-align:center;color:#fff;font-weight:600;font-size:18px;padding:0 24px}
+.escaner .abajo{position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));display:flex;gap:10px}
+.escaner .abajo .btn{background:rgba(255,255,255,.95);color:var(--grafito)}
+
+/* Ingreso */
+.ingreso{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px;max-width:420px;margin:0 auto}
+.ingreso .marca{margin-bottom:28px}
+.ingreso .marca .cinta .codigo{font-size:40px}
+.ingreso p{color:var(--gris);margin:14px 0 22px;font-size:16px}
+.msg{min-height:22px;font-size:15px;margin-top:10px;color:var(--dano)}
+
+/* Etiqueta impresa (A4 con dos etiquetas de 105 × 148 mm, como el kit) */
+#zonaImprimir{display:none}
+.hoja-etq{width:210mm;height:148.5mm;display:flex;font-family:Arial,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.celda-etq{width:105mm;height:148.5mm;padding:7mm;border:0.2mm dashed #ccc}
+.etq{width:100%;height:100%;border:1mm solid var(--c);border-radius:4mm;overflow:hidden;display:flex;flex-direction:column;background:#fff}
+.etq .banda-etq{height:14mm;flex:none;background:var(--c);color:#fff;font-weight:700;font-size:14pt;display:flex;align-items:center;justify-content:center;letter-spacing:.3mm}
+.etq .cod-etq{font-weight:700;font-size:50pt;line-height:1;text-align:center;margin:5mm 0 3mm}
+.etq .cont-etq{flex:1;margin:0 5mm;border-top:0.3mm solid #B8BEC4;padding-top:2mm;overflow:hidden}
+.etq .cont-etq .tit{display:flex;justify-content:space-between;font-size:7pt;color:#5E6B73;font-weight:700;margin-bottom:1.5mm}
+.etq .cont-etq ul{list-style:none;font-size:var(--fs,9.5pt);line-height:1.25}
+.etq .cont-etq li{display:flex;gap:2mm;padding:0.6mm 0;border-bottom:0.2mm solid #E3E7EA}
+.etq .cont-etq li b{min-width:9mm;text-align:right}
+.etq .pie-etq{flex:none;display:flex;align-items:center;justify-content:center;gap:6mm;padding:2mm 0 1mm}
+.etq .pie-etq img{height:30mm}
+.etq .pie-etq svg{width:34mm;height:34mm}
+.etq.denso .cod-etq{font-size:40pt;margin:3mm 0 2mm}
+.etq.denso .pie-etq img{height:22mm}
+.etq.denso .pie-etq svg{width:26mm;height:26mm}
+.etq.denso .cont-etq li{padding:0.3mm 0}
+.etq .nota-etq{flex:none;text-align:center;font-size:6.5pt;color:#5E6B73;padding-bottom:3mm}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{background:#fff!important;padding:0!important;min-height:0}
+  body>*:not(#zonaImprimir){display:none!important}
+  #zonaImprimir{display:block!important}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- INGRESO -->
+<section id="vIngreso" class="oculto">
+  <div class="ingreso">
+    <div class="marca"><div class="cinta" style="--area:var(--nova)"><div class="franja"></div><div class="codigo">BODEGA NOVA</div></div></div>
+    <p>Entre con el correo y la contraseña que le dio la oficina. Solo se hace una vez en este celular.</p>
+    <form id="fIngreso">
+      <label class="campo"><span>Correo</span><input id="inCorreo" type="email" autocomplete="username" required/></label>
+      <label class="campo"><span>Contraseña</span><input id="inClave" type="password" autocomplete="current-password" required/></label>
+      <button class="btn btn-primario" type="submit" id="btnIngresar">Entrar</button>
+      <div class="msg" id="msgIngreso" role="alert"></div>
+    </form>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="vApp" class="oculto">
+  <header class="barra">
+    <button class="atras oculto" id="btnAtras" aria-label="Volver al inicio">‹</button>
+    <h1>Bodega <span>Nova</span></h1>
+    <div class="quien" id="quien"></div>
+  </header>
+
+  <!-- INICIO -->
+  <main id="vInicio">
+    <div id="bandaCola"></div>
+    <button class="btn btn-escanear" id="btnEscanear">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="8" y="8" width="3" height="3"/><rect x="13" y="8" width="3" height="3"/><rect x="8" y="13" width="3" height="3"/><path d="M13 13h3v3"/></svg>
+      Escanear rack
+    </button>
+    <button class="btn btn-borde" id="btnNuevo" style="margin-top:10px">+ Rack nuevo, sin etiqueta todavía</button>
+    <button class="btn btn-texto" id="btnEscribir">¿No lee el QR? Escribir el código</button>
+
+    <div class="cifras" id="cifras"></div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Racks registrados</span><span id="totRacks"></span></div>
+      <button class="btn btn-texto oculto" id="btnImprimirTodos" style="justify-content:flex-start;padding:0">Imprimir etiquetas de estos racks</button>
+      <div class="filtros" id="filtros"></div>
+      <div id="listaRacks"></div>
+    </div>
+    <div class="seccion"><button class="btn btn-texto" id="btnSalir">Cerrar sesión en este celular</button></div>
+  </main>
+
+  <!-- RACK -->
+  <main id="vRack" class="oculto">
+    <div class="cabecera-rack" id="cabRack"></div>
+    <div class="estado" id="estadoRack"></div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Fotos del rack</span><span id="fotosEstado"></span></div>
+      <div class="fotos">
+        <button class="foto-tile" id="fotoCerrado" data-tipo="cerrado"></button>
+        <button class="foto-tile" id="fotoAbierto" data-tipo="abierto"></button>
+      </div>
+      <div class="mini-fotos" id="fotosAnteriores"></div>
+    </div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Datos del rack</span></div>
+      <div class="tarjeta">
+        <label class="campo"><span>Qué guarda</span><input id="inQue" type="text" placeholder="Ej.: Cabezas Maverick"/></label>
+        <label class="campo"><span>Cómo le dicen hoy (marca vieja)</span><input id="inMarca" type="text" placeholder="Ej.: Rack azul"/></label>
+        <div class="fila-contador">
+          <div><div class="nombre">Caben</div><div class="ayuda">Equipos que le caben al rack</div></div>
+          <div class="contador" data-campo="caben"><button type="button" data-d="-1" aria-label="Menos">−</button><output id="outCaben">0</output><button type="button" data-d="1" aria-label="Más">+</button></div>
+        </div>
+        <div style="margin-top:10px">
+          <span style="display:block;font-size:14px;font-weight:600;color:var(--gris);margin-bottom:5px">Dónde está</span>
+          <div class="segmento" id="segUbicacion">
+            <button type="button" data-v="Bodega" aria-pressed="true">Bodega</button>
+            <button type="button" data-v="En evento" aria-pressed="false">En evento</button>
+            <button type="button" data-v="Mantenimiento" aria-pressed="false">Mantenim.</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Qué tiene adentro</span><span id="ocupacion"></span></div>
+      <div id="listaContenido"></div>
+      <button class="btn btn-borde" id="btnAgregar">+ Agregar equipo</button>
+    </div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Observaciones del rack</span></div>
+      <textarea id="inObs" placeholder="Espumas, ruedas, chapas, tapa…"></textarea>
+    </div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Etiqueta</span></div>
+      <button class="btn btn-borde" id="btnImprimir">Imprimir etiqueta con el contenido</button>
+      <p style="font-size:14px;color:var(--gris);margin-top:8px">Sale una hoja con dos etiquetas iguales, con el código, el QR y los equipos de este rack. Péguelas encima de las que tiene. Si cambia el contenido, vuelva a imprimirla.</p>
+    </div>
+  </main>
+
+  <div class="pie oculto" id="pieRack">
+    <div class="dentro">
+      <div class="resumen" id="pieResumen"></div>
+      <button class="btn btn-primario" id="btnGuardar">Guardar rack</button>
+    </div>
+  </div>
+</div>
+
+<!-- Selector de equipos -->
+<div class="hoja oculto" id="hojaEquipos" role="dialog" aria-modal="true" aria-labelledby="tHojaEq">
+  <div class="caja">
+    <div class="cab-hoja"><h2 id="tHojaEq">Agregar equipo</h2><button class="btn-texto" data-cerrar>Cerrar</button></div>
+    <div class="cuerpo">
+      <input type="search" id="buscarEq" placeholder="Buscar: maverick, 101, truss…" autocomplete="off"/>
+      <div id="listaEq"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Escribir código -->
+<div class="hoja oculto" id="hojaCodigo" role="dialog" aria-modal="true" aria-labelledby="tHojaCod">
+  <div class="caja">
+    <div class="cab-hoja"><h2 id="tHojaCod">Código del rack</h2><button class="btn-texto" data-cerrar>Cerrar</button></div>
+    <div class="cuerpo">
+      <div class="titulo-sec"><span>Área (letras de la etiqueta)</span></div>
+      <div class="teclado-cod" id="codArea"></div>
+      <div class="titulo-sec"><span>Número</span></div>
+      <input type="text" inputmode="numeric" maxlength="2" id="codNum" placeholder="01" style="font-family:var(--cond);font-size:30px;text-align:center;letter-spacing:4px"/>
+      <div style="margin:16px 0 10px;text-align:center" id="codPrevio"></div>
+      <button class="btn btn-primario" id="btnCodOk" disabled>Abrir rack</button>
+    </div>
+  </div>
+</div>
+
+<!-- Escáner -->
+<div class="escaner oculto" id="vEscaner">
+  <video id="video" playsinline muted></video>
+  <div class="marco"></div>
+  <div class="texto" id="textoEscaner">Apunte al QR de la etiqueta del rack</div>
+  <div class="abajo">
+    <button class="btn" id="btnEscCancelar">Cancelar</button>
+    <button class="btn" id="btnEscEscribir">Escribir código</button>
+  </div>
+</div>
+
+<input type="file" accept="image/*" capture="environment" id="inFoto" class="oculto"/>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="zonaImprimir"></div>
+
+<script src="vendor/supabase.min.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════════════
+// Bodega Nova — registro de racks con fotos (NOVA DASH / Supabase)
+//
+// Reglas de diseño:
+//  · Todo lo que se guarda pasa por funciones bod_* del servidor (quedan
+//    con quién y cuándo, y van a la hoja de vida del rack).
+//  · Nada se pierde sin señal: cada "Guardar rack" se vuelve un trabajo en
+//    una cola local (IndexedDB) con sus fotos, y se envía en orden cuando
+//    hay conexión. Si se cierra la app, se reintenta al volver a abrirla.
+//  · Las fotos nunca se borran ni se reemplazan: se suman.
+// ════════════════════════════════════════════════════════════════
+const SUPABASE_URL='https://vzqbieygdablitjajrem.supabase.co';
+const SUPABASE_KEY='sb_publishable_mFnZrCeHfkGR5UFYzgQCcw_c14Zrf3h';
+const BUCKET='bodega-fotos';
+const AREAS={ILU:'Iluminación',SON:'Sonido',VID:'Video',EST:'Estructura y rigging',ENE:'Energía'};
+const AREA_DE_EQUIPO={'Iluminación':'ILU','Sonido':'SON','Video':'VID','Estructura y rigging':'EST','Energía':'ENE','Efectos especiales':'EFX'};
+const RE_CODIGO=/^(ILU|SON|VID|EST|ENE)-\d{2}$/;
+
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uuid=()=>(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g,()=>(Math.random()*16|0).toString(16)));
+
+let yo=null;            // {nombre, rol}
+let equipos=[];         // catálogo bod_equipos
+let racks=[];           // bod_racks + resumen
+let filtroArea='';
+let rack=null;          // rack abierto: {codigo, nuevo, datos, items:[], fotosNuevas:[], fotosPrevias:[]}
+
+// ── Avisos ──────────────────────────────────────────────────────
+let tToast;
+function aviso(txt,mal){const t=$('toast');t.textContent=txt;t.className='toast ver'+(mal?' mal':'');clearTimeout(tToast);tToast=setTimeout(()=>t.className='toast',mal?5000:2600);}
+
+// ── Cola local (IndexedDB) ─────────────────────────────────────
+const DB='novaBodega',STORE='cola';
+function abrirDB(){return new Promise((ok,mal)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>mal(r.error);});}
+async function colaTx(modo,fn){const db=await abrirDB();return new Promise((ok,mal)=>{const tx=db.transaction(STORE,modo);const st=tx.objectStore(STORE);const res=fn(st);tx.oncomplete=()=>ok(res&&res.result!==undefined?res.result:res);tx.onerror=()=>mal(tx.error);});}
+const colaPoner=job=>colaTx('readwrite',st=>st.put(job));
+const colaQuitar=id=>colaTx('readwrite',st=>st.delete(id));
+const colaTodos=()=>colaTx('readonly',st=>st.getAll());
+
+let enviando=false;
+async function procesarCola(){
+  if(enviando)return; enviando=true;
+  try{
+    const jobs=(await colaTodos()).sort((a,b)=>a.creado-b.creado);
+    for(const job of jobs){
+      if(!navigator.onLine)break;
+      try{await enviarTrabajo(job);await colaQuitar(job.id);}
+      catch(e){job.error=String(e.message||e);job.intentos=(job.intentos||0)+1;await colaPoner(job);console.warn('Cola:',e);break;}
+    }
+  }finally{enviando=false;pintarCola();}
+}
+async function enviarTrabajo(job){
+  // 1. datos del rack  2. contenido  3. fotos (cada una se marca al subir)
+  if(!job.rackOk){
+    const r=await sb.rpc('bod_guardar_rack',{payload:job.rack}); if(r.error)throw r.error;
+    job.rackOk=true; await colaPoner(job);
+  }
+  if(!job.contenidoOk&&job.items){
+    const r=await sb.rpc('bod_guardar_contenido',{p_rack:job.rack.codigo,p_items:job.items}); if(r.error)throw r.error;
+    job.contenidoOk=true; await colaPoner(job);
+  }
+  for(const f of job.fotos){
+    if(f.ok)continue;
+    if(!f.subida){
+      const up=await sb.storage.from(BUCKET).upload(f.path,f.blob,{contentType:'image/jpeg',upsert:false});
+      if(up.error&&!/exists|duplicate/i.test(up.error.message||''))throw up.error;
+      f.subida=true; await colaPoner(job);
+    }
+    const r=await sb.rpc('bod_registrar_foto',{payload:{rack:job.rack.codigo,tipo:f.tipo,ref:f.ref||null,path:f.path,nota:f.nota||null,client_uuid:f.uuid,momento:'arranque'}});
+    if(r.error)throw r.error;
+    f.ok=true; f.blob=null; await colaPoner(job);
+  }
+}
+async function pintarCola(){
+  let jobs=[];try{jobs=await colaTodos();}catch(e){}
+  const b=$('bandaCola');
+  if(!jobs.length){b.innerHTML='';return;}
+  const fotos=jobs.reduce((n,j)=>n+j.fotos.filter(f=>!f.ok).length,0);
+  const err=jobs.find(j=>j.error);
+  b.innerHTML=`<div class="banda ${err&&navigator.onLine?'error':'pendiente'}"><span>${jobs.length} rack${jobs.length>1?'s':''} y ${fotos} foto${fotos!==1?'s':''} por enviar${navigator.onLine?'':' (sin señal)'}${err&&navigator.onLine?'<br><small>'+esc(err.error)+'</small>':''}</span>${navigator.onLine?'<button id="btnReintentar">Enviar ya</button>':''}</div>`;
+  const br=$('btnReintentar'); if(br)br.onclick=()=>procesarCola();
+}
+window.addEventListener('online',()=>{procesarCola();pintarCola();});
+window.addEventListener('offline',pintarCola);
+
+// ── Sesión ─────────────────────────────────────────────────────
+async function iniciar(){
+  const {data}=await sb.auth.getSession();
+  if(!data.session){mostrar('ingreso');return;}
+  try{await cargarYo();}catch(e){
+    if(e.message==='sin_permiso'){await sb.auth.signOut();mostrar('ingreso');$('msgIngreso').textContent='Este usuario no tiene acceso a bodega. Pídale a Camilo que se lo active.';return;}
+    // Sin señal: se sigue con la identidad guardada del último ingreso.
+  }
+  mostrar('app'); irInicio();
+  procesarCola();
+}
+async function cargarYo(){
+  const cache=JSON.parse(localStorage.getItem('bodegaYo')||'null');
+  if(cache)yo=cache;
+  const p=await sb.rpc('bod_yo');
+  if(p.error)throw p.error;
+  if(!p.data||p.data.puede!==true){yo=null;localStorage.removeItem('bodegaYo');throw new Error('sin_permiso');}
+  yo={nombre:p.data.nombre||'Bodega',rol:p.data.rol};
+  localStorage.setItem('bodegaYo',JSON.stringify(yo));
+}
+$('fIngreso').onsubmit=async ev=>{
+  ev.preventDefault(); const b=$('btnIngresar'),m=$('msgIngreso'); m.textContent=''; b.disabled=true; b.textContent='Entrando…';
+  try{
+    const {error}=await sb.auth.signInWithPassword({email:$('inCorreo').value.trim(),password:$('inClave').value});
+    if(error)throw error;
+    try{await cargarYo();}catch(e){
+      if(e.message==='sin_permiso'){await sb.auth.signOut();throw new Error('Este usuario no tiene acceso a bodega. Pídale a Camilo que se lo active.');}
+      throw e;
+    }
+    mostrar('app'); irInicio(); procesarCola();
+  }catch(e){
+    m.textContent=/Invalid login/i.test(e.message)?'El correo o la contraseña no coinciden.':(/fetch|network/i.test(e.message)?'No hay conexión. Para entrar la primera vez se necesita internet.':e.message);
+  }finally{b.disabled=false;b.textContent='Entrar';}
+};
+$('btnSalir').onclick=async()=>{
+  const n=(await colaTodos()).length;
+  if(n&&!confirm(`Hay ${n} rack(s) sin enviar. Si cierra la sesión, se quedan guardados en este celular y se envían al volver a entrar. ¿Cerrar sesión?`))return;
+  await sb.auth.signOut(); localStorage.removeItem('bodegaYo'); mostrar('ingreso');
+};
+function mostrar(v){$('vIngreso').classList.toggle('oculto',v!=='ingreso');$('vApp').classList.toggle('oculto',v!=='app');}
+
+// ── Datos ──────────────────────────────────────────────────────
+async function cargarEquipos(){
+  const c=JSON.parse(localStorage.getItem('bodegaEquipos')||'null'); if(c)equipos=c;
+  const r=await sb.from('bod_equipos').select('ref,area,grupo,nombre,total,despacho').eq('activo',true).order('ref');
+  if(!r.error&&r.data){equipos=r.data;localStorage.setItem('bodegaEquipos',JSON.stringify(equipos));}
+}
+async function cargarRacks(){
+  const [r,c,f]=await Promise.all([
+    sb.from('bod_racks').select('codigo,area,que_guarda,marca_actual,caben,ubicacion,actualizado_en').order('codigo'),
+    sb.from('bod_rack_contenido').select('rack_codigo,cantidad,danados'),
+    sb.from('bod_fotos').select('rack_codigo,tipo')
+  ]);
+  if(r.error)throw r.error;
+  const cont={},fot={};
+  (c.data||[]).forEach(x=>{const o=cont[x.rack_codigo]||(cont[x.rack_codigo]={u:0,d:0,n:0});o.u+=x.cantidad;o.d+=x.danados;o.n++;});
+  (f.data||[]).forEach(x=>{const o=fot[x.rack_codigo]||(fot[x.rack_codigo]={});o[x.tipo]=(o[x.tipo]||0)+1;});
+  racks=r.data.map(x=>({...x,cont:cont[x.codigo]||{u:0,d:0,n:0},fotos:fot[x.codigo]||{}}));
+  localStorage.setItem('bodegaRacks',JSON.stringify(racks));
+}
+
+// ── Inicio ─────────────────────────────────────────────────────
+async function irInicio(){
+  rack=null;
+  $('vInicio').classList.remove('oculto');$('vRack').classList.add('oculto');$('pieRack').classList.add('oculto');$('btnAtras').classList.add('oculto');
+  $('quien').innerHTML=yo?esc(yo.nombre):'';
+  window.scrollTo(0,0);
+  racks=JSON.parse(localStorage.getItem('bodegaRacks')||'[]');
+  pintarInicio(); pintarCola();
+  try{await Promise.all([cargarEquipos(),cargarRacks()]);pintarInicio();}catch(e){console.warn(e);}
+}
+function pintarInicio(){
+  const conFotos=racks.filter(r=>r.fotos.cerrado&&r.fotos.abierto).length;
+  const unidades=racks.reduce((n,r)=>n+r.cont.u,0);
+  $('cifras').innerHTML=`<div><b>${racks.length}</b><span>racks</span></div><div><b>${unidades}</b><span>equipos</span></div><div><b>${conFotos}</b><span>con fotos</span></div>`;
+  const areasPresentes=Object.keys(AREAS).filter(a=>racks.some(r=>r.codigo.startsWith(a)));
+  $('filtros').innerHTML=['',...areasPresentes].map(a=>`<button data-a="${a}" aria-pressed="${filtroArea===a}">${a?AREAS[a]:'Todos'}</button>`).join('');
+  $('filtros').querySelectorAll('button').forEach(b=>b.onclick=()=>{filtroArea=b.dataset.a;pintarInicio();});
+  const lista=racks.filter(r=>!filtroArea||r.codigo.startsWith(filtroArea));
+  $('totRacks').textContent=lista.length?lista.length:'';
+  $('btnImprimirTodos').classList.toggle('oculto',!lista.some(r=>r.cont.n));
+  $('btnImprimirTodos').textContent=filtroArea?`Imprimir etiquetas de ${AREAS[filtroArea]}`:'Imprimir etiquetas de todos los racks';
+  $('listaRacks').innerHTML=lista.length?lista.map(r=>{
+    const pre=r.codigo.slice(0,3), faltan=[];
+    if(!(r.fotos.cerrado&&r.fotos.abierto))faltan.push('fotos'); if(!r.cont.n)faltan.push('contenido');
+    return `<button class="rack-fila" data-c="${r.codigo}">
+      <span class="cinta chica" style="--area:var(--${pre})"><span class="franja"></span><span class="codigo">${r.codigo}</span></span>
+      <span class="info"><b>${esc(r.que_guarda||'Sin descripción')}</b><small>${r.cont.u} equipo${r.cont.u!==1?'s':''}${r.caben?' de '+r.caben:''}${r.cont.d?' · '+r.cont.d+' dañado'+(r.cont.d>1?'s':''):''}${r.ubicacion!=='Bodega'?' · '+esc(r.ubicacion):''}</small></span>
+      ${faltan.length?`<span class="pastilla falta">Falta ${faltan.join(' y ')}</span>`:'<span class="pastilla ok">Completo</span>'}
+    </button>`;}).join('')
+    :`<div class="vacio">${racks.length?'No hay racks de esta área todavía.':'Todavía no hay racks registrados.<br>Toque «Rack nuevo» para registrar el primero.'}</div>`;
+  $('listaRacks').querySelectorAll('.rack-fila').forEach(b=>b.onclick=()=>abrirRack(b.dataset.c));
+}
+
+// ── Escáner de QR ──────────────────────────────────────────────
+let flujo=null,escaneando=false,detector=null;
+function leerCodigo(txt){
+  const m=String(txt||'').toUpperCase().match(/(ILU|SON|VID|EST|ENE)-\d{2}/);
+  return m?m[0]:null;
+}
+async function abrirEscaner(){
+  $('vEscaner').classList.remove('oculto'); $('textoEscaner').textContent='Apunte al QR de la etiqueta del rack';
+  try{
+    flujo=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false});
+  }catch(e){
+    cerrarEscaner(); aviso('No se pudo abrir la cámara. Escriba el código.',true); abrirHojaCodigo(false); return;
+  }
+  const v=$('video'); v.srcObject=flujo; await v.play().catch(()=>{});
+  if('BarcodeDetector' in window){try{detector=new BarcodeDetector({formats:['qr_code']});}catch(e){detector=null;}}
+  escaneando=true; buscarQR();
+}
+const lienzo=document.createElement('canvas'),ctx=lienzo.getContext('2d',{willReadFrequently:true});
+async function buscarQR(){
+  if(!escaneando)return;
+  const v=$('video'); let txt=null;
+  if(v.readyState>=2){
+    try{
+      if(detector){const r=await detector.detect(v); if(r.length)txt=r[0].rawValue;}
+      else{
+        const w=v.videoWidth,h=v.videoHeight,s=Math.min(w,h)*0.8; lienzo.width=lienzo.height=480;
+        ctx.drawImage(v,(w-s)/2,(h-s)/2,s,s,0,0,480,480);
+        const img=ctx.getImageData(0,0,480,480); const r=jsQR(img.data,480,480,{inversionAttempts:'dontInvert'}); if(r)txt=r.data;
+      }
+    }catch(e){}
+  }
+  if(txt){
+    const cod=leerCodigo(txt);
+    if(cod){if(navigator.vibrate)navigator.vibrate(80);cerrarEscaner();abrirRack(cod);return;}
+    $('textoEscaner').textContent='Ese QR no es de un rack de Nova';
+  }
+  setTimeout(()=>requestAnimationFrame(buscarQR),120);
+}
+function cerrarEscaner(){escaneando=false;if(flujo){flujo.getTracks().forEach(t=>t.stop());flujo=null;}$('vEscaner').classList.add('oculto');}
+$('btnEscanear').onclick=abrirEscaner;
+$('btnEscCancelar').onclick=cerrarEscaner;
+$('btnEscEscribir').onclick=()=>{cerrarEscaner();abrirHojaCodigo(false);};
+
+// ── Escribir el código a mano ──────────────────────────────────
+let codArea='';
+let modoNuevo=false;
+function siguienteCodigo(pre){
+  // El número más alto usado en el área (en la base, en lo guardado en el celular y en la cola) + 1
+  let max=0; const ver=c=>{if(c&&c.startsWith(pre+'-'))max=Math.max(max,parseInt(c.slice(4),10)||0);};
+  racks.forEach(r=>ver(r.codigo)); colaCache.forEach(j=>ver(j.rack&&j.rack.codigo));
+  return String(max+1).padStart(2,'0');
+}
+let colaCache=[];
+async function abrirHojaNuevo(){
+  try{colaCache=await colaTodos();}catch(e){colaCache=[];}
+  modoNuevo=true; abrirHojaCodigo(true);
+}
+function abrirHojaCodigo(nuevo){
+  modoNuevo=nuevo===true;
+  $('tHojaCod').textContent=modoNuevo?'Rack nuevo':'Código del rack';
+  codArea=''; $('codNum').value='';
+  $('codArea').innerHTML=Object.keys(AREAS).map(a=>`<button type="button" data-a="${a}" aria-pressed="false" style="border-bottom:4px solid var(--${a})">${a}</button>`).join('');
+  $('codArea').querySelectorAll('button').forEach(b=>b.onclick=()=>{codArea=b.dataset.a;$('codArea').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));if(modoNuevo)$('codNum').value=siguienteCodigo(codArea);previoCodigo();});
+  previoCodigo(); abrirHoja('hojaCodigo');
+}
+function codigoEscrito(){const n=$('codNum').value.replace(/\D/g,'');return codArea&&n?`${codArea}-${n.padStart(2,'0')}`:null;}
+function previoCodigo(){
+  const c=codigoEscrito(); $('btnCodOk').disabled=!c;
+  const yaExiste=c&&racks.some(r=>r.codigo===c);
+  $('codPrevio').innerHTML=c?`<span class="cinta" style="--area:var(--${codArea})"><span class="franja"></span><span class="codigo">${c}</span></span>${modoNuevo?`<div style="font-size:14px;color:${yaExiste?'var(--dano)':'var(--gris)'};margin-top:10px">${yaExiste?'Ese código ya está en uso. Use el número que propone la app.':'Es el siguiente número libre del área. Después de guardar el rack, imprima su etiqueta.'}</div>`:''}`:`<span style="color:var(--gris)">${modoNuevo?'Elija el área del rack':'Elija el área y escriba el número'}</span>`;
+  $('btnCodOk').textContent=modoNuevo?'Crear rack':'Abrir rack';
+  if(modoNuevo&&yaExiste)$('btnCodOk').disabled=true;
+}
+$('codNum').oninput=previoCodigo;
+$('btnCodOk').onclick=()=>{const c=codigoEscrito();if(c){cerrarHoja('hojaCodigo');abrirRack(c);}};
+$('btnEscribir').onclick=()=>abrirHojaCodigo(false);
+$('btnNuevo').onclick=abrirHojaNuevo;
+
+function abrirHoja(id){$(id).classList.remove('oculto');}
+function cerrarHoja(id){$(id).classList.add('oculto');}
+document.querySelectorAll('.hoja').forEach(h=>{h.addEventListener('click',e=>{if(e.target===h||e.target.hasAttribute('data-cerrar'))cerrarHoja(h.id);});});
+
+// ── Rack ───────────────────────────────────────────────────────
+async function abrirRack(codigo){
+  if(!RE_CODIGO.test(codigo)){aviso('Código no válido: '+codigo,true);return;}
+  const pre=codigo.slice(0,3);
+  rack={codigo,pre,nuevo:true,datos:{que_guarda:'',marca_actual:'',caben:0,ubicacion:'Bodega',observaciones:''},items:[],fotosNuevas:[],fotosPrevias:[],cambios:false};
+  $('vInicio').classList.add('oculto');$('vRack').classList.remove('oculto');$('pieRack').classList.remove('oculto');$('btnAtras').classList.remove('oculto');
+  document.documentElement.style.setProperty('--area',`var(--${pre})`);
+  window.scrollTo(0,0); pintarRack();
+  if(!equipos.length)await cargarEquipos().catch(()=>{});
+  try{
+    const [r,c,f]=await Promise.all([
+      sb.from('bod_racks').select('*').eq('codigo',codigo).maybeSingle(),
+      sb.from('bod_rack_contenido').select('ref,cantidad,danados,seriales,notas').eq('rack_codigo',codigo).order('ref'),
+      sb.from('bod_fotos').select('id,tipo,path,ref,creado_en,tomado_por_nombre').eq('rack_codigo',codigo).order('creado_en',{ascending:false}).limit(30)
+    ]);
+    if(rack&&rack.codigo===codigo&&!rack.cambios){
+      if(r.data){rack.nuevo=false;Object.assign(rack.datos,{que_guarda:r.data.que_guarda||'',marca_actual:r.data.marca_actual||'',caben:r.data.caben||0,ubicacion:r.data.ubicacion,observaciones:r.data.observaciones||''});rack.creado=r.data;}
+      rack.items=(c.data||[]).map(x=>({...x,seriales:x.seriales||'',notas:x.notas||''}));
+      rack.fotosPrevias=f.data||[];
+      pintarRack(); firmarPrevias();
+    }
+  }catch(e){aviso('Sin conexión: se muestra el rack vacío. Lo que guarde se envía al volver la señal.',true);}
+}
+function pintarRack(){
+  const r=rack,d=r.datos;
+  $('cabRack').innerHTML=`<span class="cinta" style="--area:var(--${r.pre})"><span class="franja"></span><span class="codigo">${r.codigo}</span></span><span class="area" style="--area:var(--${r.pre})">${AREAS[r.pre]}</span>`;
+  $('estadoRack').textContent=r.nuevo?'Rack nuevo: llene los datos, tome las fotos y agregue lo que tiene adentro.':`Registrado por ${r.creado?.creado_por_nombre||'—'}. Lo que cambie queda en su hoja de vida.`;
+  $('inQue').value=d.que_guarda; $('inMarca').value=d.marca_actual; $('outCaben').textContent=d.caben; $('inObs').value=d.observaciones;
+  $('segUbicacion').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===d.ubicacion));
+  pintarFotos(); pintarContenido();
+}
+['inQue','inMarca','inObs'].forEach(id=>$(id).addEventListener('input',()=>{rack.cambios=true;rack.datos[{inQue:'que_guarda',inMarca:'marca_actual',inObs:'observaciones'}[id]]=$(id).value;}));
+$('segUbicacion').querySelectorAll('button').forEach(b=>b.onclick=()=>{rack.cambios=true;rack.datos.ubicacion=b.dataset.v;$('segUbicacion').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+document.querySelector('[data-campo=caben]').addEventListener('click',e=>{const d=+e.target.dataset.d;if(!d)return;rack.cambios=true;rack.datos.caben=Math.max(0,rack.datos.caben+d);$('outCaben').textContent=rack.datos.caben;pintarResumen();});
+
+// Fotos
+const ICONO_CAMARA='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+function pintarFotos(){
+  const titulos={cerrado:['Foto 1','Rack cerrado'],abierto:['Foto 2','Rack abierto, desde arriba']};
+  ['cerrado','abierto'].forEach(t=>{
+    const el=$(t==='cerrado'?'fotoCerrado':'fotoAbierto');
+    const nueva=[...rack.fotosNuevas].reverse().find(f=>f.tipo===t);
+    const previa=rack.fotosPrevias.find(f=>f.tipo===t);
+    el.classList.toggle('lista',!!(nueva||previa));
+    if(nueva) el.innerHTML=`<img src="${nueva.url}" alt="${titulos[t][1]}"/><span class="sello">Nueva · por guardar</span>`;
+    else if(previa) el.innerHTML=`<img data-path="${esc(previa.path)}" alt="${titulos[t][1]}"/><span class="sello nube">Guardada · tocar para otra</span>`;
+    else el.innerHTML=`${ICONO_CAMARA}${titulos[t][0]}<small>${titulos[t][1]}</small>`;
+  });
+  const ok=['cerrado','abierto'].filter(t=>rack.fotosNuevas.some(f=>f.tipo===t)||rack.fotosPrevias.some(f=>f.tipo===t)).length;
+  $('fotosEstado').textContent=ok===2?'Listas':`Faltan ${2-ok}`;
+  const otras=rack.fotosPrevias.filter(f=>f.tipo==='dano');
+  $('fotosAnteriores').innerHTML=otras.length?otras.map(f=>`<img data-path="${esc(f.path)}" alt="Daño" title="${esc(f.tomado_por_nombre||'')}"/>`).join(''):'';
+  firmarPrevias();
+}
+let firmas={};
+async function firmarPrevias(){
+  const imgs=[...document.querySelectorAll('#vRack img[data-path]')]; if(!imgs.length)return;
+  const faltan=[...new Set(imgs.map(i=>i.dataset.path).filter(p=>!firmas[p]))];
+  if(faltan.length){try{const r=await sb.storage.from(BUCKET).createSignedUrls(faltan,3600);(r.data||[]).forEach(x=>{if(x.signedUrl)firmas[x.path]=x.signedUrl;});}catch(e){}}
+  imgs.forEach(i=>{if(firmas[i.dataset.path])i.src=firmas[i.dataset.path];});
+}
+let fotoPedida=null;
+$('fotoCerrado').onclick=()=>pedirFoto({tipo:'cerrado'});
+$('fotoAbierto').onclick=()=>pedirFoto({tipo:'abierto'});
+function pedirFoto(o){fotoPedida=o;$('inFoto').value='';$('inFoto').click();}
+$('inFoto').onchange=async()=>{
+  const file=$('inFoto').files[0]; if(!file||!fotoPedida)return;
+  try{
+    const blob=await comprimir(file);
+    const id=uuid(), ahora=new Date();
+    const sello=ahora.toISOString().replace(/[-:]/g,'').slice(0,15);
+    const f={uuid:id,tipo:fotoPedida.tipo,ref:fotoPedida.ref||null,nota:fotoPedida.nota||null,blob,url:URL.createObjectURL(blob),
+             path:`racks/${rack.codigo}/${sello}-${fotoPedida.tipo}${fotoPedida.ref?'-'+fotoPedida.ref:''}-${id.slice(0,8)}.jpg`};
+    rack.fotosNuevas.push(f); rack.cambios=true;
+    pintarFotos(); pintarContenido(); aviso('Foto lista. Se envía al guardar el rack.');
+  }catch(e){aviso('No se pudo leer la foto. Intente otra vez.',true);}
+};
+async function comprimir(file){
+  const max=1600;
+  let bmp; try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){bmp=await createImageBitmap(file);}
+  const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas'); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  return await new Promise((ok,mal)=>c.toBlob(b=>b?ok(b):mal(new Error('sin imagen')),'image/jpeg',0.72));
+}
+
+// Contenido
+function equipo(ref){return equipos.find(e=>e.ref===ref)||{ref,nombre:'Ref. '+ref,grupo:'',area:''};}
+const PIDE_SERIAL=/Cabezas|Consolas|Láser|inalámbricos|monitoreo|Procesadores|Distros/i;
+function pintarContenido(){
+  const cont=$('listaContenido');
+  if(!rack.items.length){cont.innerHTML='<div class="vacio">Todavía no hay equipos. Toque "Agregar equipo" por cada tipo de equipo que tenga el rack.</div>';pintarResumen();return;}
+  cont.innerHTML=rack.items.map((it,i)=>{
+    const e=equipo(it.ref), pre=AREA_DE_EQUIPO[e.area]||rack.pre;
+    const fotosDano=rack.fotosNuevas.filter(f=>f.tipo==='dano'&&f.ref===it.ref).length+rack.fotosPrevias.filter(f=>f.tipo==='dano'&&f.ref===it.ref).length;
+    const verSerial=it.seriales||PIDE_SERIAL.test(e.grupo);
+    return `<div class="equipo${it.danados?' con-dano':''}" style="--area:var(--${pre},var(--grafito))" data-i="${i}">
+      <div class="cab"><div><div class="ref">${e.ref}</div><div class="nom">${esc(e.nombre)}</div></div><button class="quitar" data-acc="quitar">Quitar</button></div>
+      <div class="fila-contador"><div class="nombre">Cantidad</div><div class="contador"><button data-acc="cant" data-d="-1" aria-label="Menos">−</button><output>${it.cantidad}</output><button data-acc="cant" data-d="1" aria-label="Más">+</button></div></div>
+      <div class="fila-contador"><div><div class="nombre">Dañados</div><div class="ayuda">0 si todos funcionan</div></div><div class="contador"><button data-acc="dan" data-d="-1" aria-label="Menos">−</button><output>${it.danados}</output><button data-acc="dan" data-d="1" aria-label="Más">+</button></div></div>
+      ${it.danados?`<div class="aviso-dano"><span>${fotosDano?fotosDano+' foto'+(fotosDano>1?'s':'')+' del daño':'Falta la foto del daño'}</span><button data-acc="fotodano">${fotosDano?'Otra foto':'Tomar foto'}</button></div>`:''}
+      <div class="extra">
+        ${verSerial?`<label class="campo"><span>Seriales (separados por coma)</span><input type="text" data-acc="ser" value="${esc(it.seriales)}" placeholder="Ej.: MSH0231, MSH0232"/></label>`:''}
+        <label class="campo" style="margin-bottom:0"><span>Daños o notas</span><input type="text" data-acc="nota" value="${esc(it.notas)}" placeholder="Ej.: 1 con lente rayado"/></label>
+      </div>
+    </div>`;}).join('');
+  pintarResumen();
+}
+$('listaContenido').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return; const card=b.closest('.equipo'); const it=rack.items[+card.dataset.i];
+  const acc=b.dataset.acc, d=+b.dataset.d||0;
+  if(acc==='cant'){it.cantidad=Math.max(1,it.cantidad+d);it.danados=Math.min(it.danados,it.cantidad);}
+  else if(acc==='dan'){it.danados=Math.min(it.cantidad,Math.max(0,it.danados+d));}
+  else if(acc==='quitar'){if(!confirm('¿Quitar '+equipo(it.ref).nombre+' de este rack?'))return;rack.items.splice(+card.dataset.i,1);}
+  else if(acc==='fotodano'){pedirFoto({tipo:'dano',ref:it.ref,nota:it.notas});return;}
+  rack.cambios=true; pintarContenido();
+});
+$('listaContenido').addEventListener('input',e=>{
+  const card=e.target.closest('.equipo'); if(!card)return; const it=rack.items[+card.dataset.i];
+  if(e.target.dataset.acc==='ser')it.seriales=e.target.value; if(e.target.dataset.acc==='nota')it.notas=e.target.value; rack.cambios=true;
+});
+function pintarResumen(){
+  const u=rack.items.reduce((n,i)=>n+i.cantidad,0), cab=rack.datos.caben;
+  $('pieResumen').innerHTML=`<b>${u}${cab?' / '+cab:''}</b>equipos`;
+  $('ocupacion').textContent=cab?(u>cab?`${u-cab} de más`:u<cab?`${cab-u} puesto${cab-u>1?'s':''} libre${cab-u>1?'s':''}`:'Lleno'):'';
+  $('ocupacion').style.color=cab&&u>cab?'var(--dano)':'';
+}
+
+// Selector de equipos
+$('btnAgregar').onclick=()=>{$('buscarEq').value='';pintarSelector();abrirHoja('hojaEquipos');};
+$('buscarEq').oninput=pintarSelector;
+function sinTildes(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();}
+function pintarSelector(){
+  const q=sinTildes($('buscarEq').value.trim()), ya=new Set(rack.items.map(i=>i.ref));
+  let lista=equipos.filter(e=>!ya.has(e.ref));
+  if(q)lista=lista.filter(e=>sinTildes(e.nombre+' '+e.ref+' '+e.grupo).includes(q));
+  else{ // primero los del área del rack
+    lista.sort((a,b)=>((AREA_DE_EQUIPO[a.area]===rack.pre)?0:1)-((AREA_DE_EQUIPO[b.area]===rack.pre)?0:1)||a.ref-b.ref);
+  }
+  let html='',grupo='';
+  lista.slice(0,q?60:400).forEach(e=>{
+    const g=(AREA_DE_EQUIPO[e.area]===rack.pre?'':e.area+' · ')+e.grupo;
+    if(g!==grupo){html+=`<div class="grupo-lista">${esc(g)}</div>`;grupo=g;}
+    html+=`<button class="opcion" data-ref="${e.ref}"><b>${esc(e.nombre)}</b><small>Ref. ${e.ref} · ${e.total} en inventario</small></button>`;
+  });
+  $('listaEq').innerHTML=html||'<div class="vacio">No aparece ese equipo. Revise cómo está escrito o búsquelo por número.</div>';
+  $('listaEq').querySelectorAll('.opcion').forEach(b=>b.onclick=()=>{
+    rack.items.push({ref:+b.dataset.ref,cantidad:1,danados:0,seriales:'',notas:''}); rack.cambios=true;
+    cerrarHoja('hojaEquipos'); pintarContenido();
+    const cards=document.querySelectorAll('#listaContenido .equipo'); cards[cards.length-1]?.scrollIntoView({behavior:'smooth',block:'center'});
+  });
+}
+
+// Guardar
+$('btnGuardar').onclick=async()=>{
+  const r=rack, d=r.datos;
+  const faltaFotoDano=r.items.filter(it=>it.danados&&!r.fotosNuevas.some(f=>f.tipo==='dano'&&f.ref===it.ref)&&!r.fotosPrevias.some(f=>f.tipo==='dano'&&f.ref===it.ref));
+  const faltaFotos=['cerrado','abierto'].filter(t=>!r.fotosNuevas.some(f=>f.tipo===t)&&!r.fotosPrevias.some(f=>f.tipo===t));
+  const avisos=[];
+  if(!d.que_guarda.trim())avisos.push('qué guarda el rack');
+  if(faltaFotos.length)avisos.push(faltaFotos.length===2?'las dos fotos del rack':'la foto del rack '+faltaFotos[0]);
+  if(faltaFotoDano.length)avisos.push('la foto del daño de '+faltaFotoDano.map(i=>equipo(i.ref).nombre).join(', '));
+  if(!r.items.length)avisos.push('lo que tiene adentro');
+  if(avisos.length&&!confirm('Falta: '+avisos.join('; ')+'.\n\n¿Guardar así y completarlo después?'))return;
+  const job={id:uuid(),creado:Date.now(),
+    rack:{codigo:r.codigo,que_guarda:d.que_guarda,marca_actual:d.marca_actual,caben:d.caben||null,ubicacion:d.ubicacion,observaciones:d.observaciones},
+    items:r.items.map(i=>({ref:i.ref,cantidad:i.cantidad,danados:i.danados,seriales:i.seriales,notas:i.notas})),
+    fotos:r.fotosNuevas.map(f=>({uuid:f.uuid,tipo:f.tipo,ref:f.ref,nota:f.nota,path:f.path,blob:f.blob}))};
+  const b=$('btnGuardar'); b.disabled=true; b.textContent='Guardando…';
+  try{await colaPoner(job);}catch(e){aviso('No se pudo guardar en el celular: '+e.message,true);b.disabled=false;b.textContent='Guardar rack';return;}
+  rack=null;
+  await procesarCola();
+  const quedo=(await colaTodos()).some(j=>j.id===job.id);
+  b.disabled=false; b.textContent='Guardar rack';
+  aviso(quedo?'Guardado en el celular. Se envía cuando haya señal.':`Rack ${job.rack.codigo} guardado.`);
+  irInicio();
+};
+$('btnAtras').onclick=()=>{
+  if(rack&&rack.cambios&&!confirm('Tiene cambios sin guardar en este rack. ¿Salir sin guardar?'))return;
+  irInicio();
+};
+
+// ── Imprimir etiqueta con el contenido ─────────────────────────
+const COLOR_AREA={ILU:'#B45309',SON:'#1D4ED8',VID:'#7C3AED',EST:'#047857',ENE:'#B91C1C'};
+function svgQR(texto){const q=qrcode(0,'M');q.addData(texto);q.make();return q.createSvgTag({cellSize:2,margin:0,scalable:true});}
+function etiquetaHTML(codigo,items){
+  const pre=codigo.slice(0,3), denso=items.length>7, max=denso?14:7;
+  const filas=items.map(i=>`<li><b>${i.cantidad}</b><span>${esc(equipo(i.ref).nombre)}</span></li>`);
+  const extra=filas.length>max?`<li><b></b><span>y ${filas.length-max+1} equipos más (ver la app)</span></li>`:'';
+  const lista=filas.length>max?filas.slice(0,max-1).join('')+extra:filas.join('');
+  const fs=items.length>11?'7.5pt':items.length>7?'8.5pt':items.length>5?'10pt':'11pt';
+  const hoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
+  return `<div class="celda-etq"><div class="etq${denso?' denso':''}" style="--c:${COLOR_AREA[pre]}">
+    <div class="banda-etq">${AREAS[pre].toUpperCase()}</div>
+    <div class="cod-etq">${codigo}</div>
+    <div class="cont-etq" style="--fs:${fs}"><div class="tit"><span>CONTIENE</span><span>al ${hoy}</span></div>
+      <ul>${lista||'<li><span>Sin equipos registrados</span></li>'}</ul></div>
+    <div class="pie-etq"><img src="logo-nova.png" alt="Nova Corp"/>${svgQR('NOVA-RACK:'+codigo)}</div>
+    <div class="nota-etq">No despegar. Este código no cambia aunque cambie el contenido.</div>
+  </div></div>`;
+}
+$('btnImprimir').onclick=()=>{
+  if(!rack)return;
+  if(!rack.items.length){aviso('Agregue primero los equipos del rack.',true);return;}
+  if(rack.cambios&&!confirm('Hay cambios sin guardar. La etiqueta sale con lo que se ve en pantalla. ¿Imprimir así?'))return;
+  imprimirHojas([{codigo:rack.codigo,items:[...rack.items].sort((a,b)=>a.ref-b.ref)}]);
+};
+function imprimirHojas(lista){
+  // Una hoja por rack, con dos etiquetas iguales (tapa y costado)
+  const z=$('zonaImprimir');
+  z.innerHTML=lista.map((r,i)=>`<div class="hoja-etq" style="${i<lista.length-1?'break-after:page;page-break-after:always':''}">${etiquetaHTML(r.codigo,r.items)}${etiquetaHTML(r.codigo,r.items)}</div>`).join('');
+  const imgs=[...z.querySelectorAll('img')];
+  Promise.all(imgs.map(im=>im.complete?1:new Promise(ok=>{im.onload=im.onerror=ok;}))).then(()=>setTimeout(()=>window.print(),50));
+}
+$('btnImprimirTodos').onclick=async()=>{
+  const lista=racks.filter(r=>!filtroArea||r.codigo.startsWith(filtroArea)).filter(r=>r.cont.n);
+  if(!lista.length){aviso('No hay racks con equipos registrados para imprimir.',true);return;}
+  if(!confirm(`Se van a imprimir ${lista.length} hoja${lista.length>1?'s':''}, una por rack, con dos etiquetas cada una. ¿Seguir?`))return;
+  const r=await sb.from('bod_rack_contenido').select('rack_codigo,ref,cantidad').in('rack_codigo',lista.map(x=>x.codigo)).order('ref');
+  if(r.error){aviso('Sin conexión: no se pudo leer el contenido para imprimir.',true);return;}
+  if(!equipos.length)await cargarEquipos().catch(()=>{});
+  imprimirHojas(lista.map(x=>({codigo:x.codigo,items:r.data.filter(c=>c.rack_codigo===x.codigo)})));
+};
+
+// ── Arranque ───────────────────────────────────────────────────
+if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('service-worker.js').catch(()=>{});}
+iniciar();
+</script>
+</body>
+</html>
