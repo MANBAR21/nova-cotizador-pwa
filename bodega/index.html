@@ -108,6 +108,20 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 .foto-tile .sello.nube{background:var(--grafito)}
 .mini-fotos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .mini-fotos img{width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--linea)}
+.ayuda-afuera{font-size:14px;color:var(--gris);margin:-4px 0 10px}
+.grid-afuera{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid-afuera button{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:2px solid var(--ok);background:#F4F6F7;padding:0}
+.grid-afuera button.guardada{border-color:var(--linea)}
+.grid-afuera button img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.grid-afuera button .sello{position:absolute;left:4px;bottom:4px;background:var(--ok);color:#fff;font-size:11px;font-weight:600;padding:1px 6px;border-radius:12px}
+.grid-afuera .mas{border:2px dashed #9AA6AD;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:600;font-size:14px;color:var(--grafito)}
+.grid-afuera .mas svg{width:28px;height:28px}
+.visor{position:fixed;inset:0;z-index:65;background:#0A0E10;display:flex;flex-direction:column}
+.visor img{flex:1;min-height:0;width:100%;object-fit:contain}
+.visor-pie{display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.visor-pie button{flex:1;min-height:52px;border-radius:var(--radio);font-weight:600;font-size:16px;background:#fff;color:var(--grafito)}
+.visor-pie button.quitar-foto{background:var(--dano);color:#fff}
+.visor .info{color:#C9D1D5;font-size:14px;text-align:center;padding:10px 16px 0}
 
 /* Contenido del rack */
 .equipo{background:var(--panel);border:1px solid var(--linea);border-left:6px solid var(--area,var(--grafito));border-radius:var(--radio);padding:12px 14px;margin-bottom:10px}
@@ -295,6 +309,11 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
         <button class="foto-tile" id="fotoAbierto" data-tipo="abierto"></button>
       </div>
       <div class="mini-fotos" id="fotosAnteriores"></div>
+      <div class="afuera">
+        <div class="titulo-sec" style="margin-top:16px"><span>Equipos afuera del rack</span><span id="totAfuera"></span></div>
+        <div class="ayuda-afuera">Saque los equipos y tómeles todas las fotos que hagan falta.</div>
+        <div class="grid-afuera" id="fotosAfuera"></div>
+      </div>
     </div>
 
     <div class="seccion">
@@ -390,6 +409,11 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 </div>
 
 <input type="file" accept="image/*" capture="environment" id="inFoto" class="oculto"/>
+<div class="visor oculto" id="visor" role="dialog" aria-label="Foto">
+  <div class="info" id="visorInfo"></div>
+  <img id="visorImg" alt="Foto"/>
+  <div class="visor-pie"><button class="quitar-foto" id="visorQuitar">Quitar esta foto</button><button id="visorCerrar">Cerrar</button></div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div id="zonaImprimir"></div>
 
@@ -737,7 +761,7 @@ async function abrirRack(codigo,borrador){
     const [r,c,f,ac,todo]=await Promise.all([
       sb.from('bod_racks').select('*').eq('codigo',codigo).maybeSingle(),
       sb.from('bod_rack_contenido').select('ref,cantidad,danados,seriales,notas').eq('rack_codigo',codigo).order('ref'),
-      sb.from('bod_fotos').select('id,tipo,path,ref,creado_en,tomado_por_nombre').eq('rack_codigo',codigo).order('creado_en',{ascending:false}).limit(30),
+      sb.from('bod_fotos').select('id,tipo,path,ref,creado_en,tomado_por_nombre').eq('rack_codigo',codigo).order('creado_en',{ascending:false}).limit(200),
       sb.from('bod_rack_accesorios').select('nombre,cantidad').eq('rack_codigo',codigo).order('nombre'),
       sb.from('bod_rack_contenido').select('rack_codigo,ref,cantidad,seriales')
     ]);
@@ -784,8 +808,33 @@ function pintarFotos(){
   $('fotosEstado').textContent=ok===2?'Listas':`Faltan ${2-ok}`;
   const otras=rack.fotosPrevias.filter(f=>f.tipo==='dano');
   $('fotosAnteriores').innerHTML=otras.length?otras.map(f=>`<img data-path="${esc(f.path)}" alt="Daño" title="${esc(f.tomado_por_nombre||'')}"/>`).join(''):'';
+  // Equipos afuera del rack: todas las fotos que hagan falta (tipo «otro»).
+  const nuevasAf=rack.fotosNuevas.filter(f=>f.tipo==='otro'), previasAf=rack.fotosPrevias.filter(f=>f.tipo==='otro');
+  $('totAfuera').textContent=nuevasAf.length+previasAf.length?String(nuevasAf.length+previasAf.length):'';
+  $('fotosAfuera').innerHTML=
+    nuevasAf.map(f=>`<button data-nueva="${f.uuid}" aria-label="Foto nueva"><img src="${f.url}" alt=""/><span class="sello">Nueva</span></button>`).join('')+
+    previasAf.map(f=>`<button class="guardada" data-previa="${f.id}" aria-label="Foto guardada"><img data-path="${esc(f.path)}" alt=""/></button>`).join('')+
+    `<button class="mas" id="btnFotoAfuera">${ICONO_CAMARA}<span>${nuevasAf.length+previasAf.length?'Otra foto':'Tomar foto'}</span></button>`;
   firmarPrevias();
 }
+$('fotosAfuera').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  if(b.id==='btnFotoAfuera'){pedirFoto({tipo:'otro',nota:'Equipos afuera del rack'});return;}
+  if(b.dataset.nueva){const f=rack.fotosNuevas.find(x=>x.uuid===b.dataset.nueva);if(f)abrirVisor(f.url,'Foto nueva · todavía no se ha guardado',f.uuid);}
+  else if(b.dataset.previa){const f=rack.fotosPrevias.find(x=>String(x.id)===b.dataset.previa);if(f)abrirVisor(firmas[f.path]||'',`Guardada por ${f.tomado_por_nombre||'—'} el ${new Date(f.creado_en).toLocaleString('es-CO',{timeZone:'America/Bogota',dateStyle:'medium',timeStyle:'short'})}`,null);}
+});
+// Visor: ver la foto grande. Solo las fotos nuevas (sin guardar) se pueden quitar.
+let visorUuid=null;
+function abrirVisor(src,info,uuidNueva){
+  visorUuid=uuidNueva; $('visorImg').src=src; $('visorInfo').textContent=info;
+  $('visorQuitar').classList.toggle('oculto',!uuidNueva); $('visor').classList.remove('oculto');
+}
+$('visorCerrar').onclick=()=>{$('visor').classList.add('oculto');visorUuid=null;};
+$('visorQuitar').onclick=()=>{
+  if(!visorUuid)return; const i=rack.fotosNuevas.findIndex(f=>f.uuid===visorUuid);
+  if(i>=0){URL.revokeObjectURL(rack.fotosNuevas[i].url);rack.fotosNuevas.splice(i,1);}
+  $('visor').classList.add('oculto'); visorUuid=null; pintarFotos(); aviso('Foto quitada.');
+};
 let firmas={};
 async function firmarPrevias(){
   const imgs=[...document.querySelectorAll('#vRack img[data-path]')]; if(!imgs.length)return;
