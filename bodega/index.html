@@ -131,6 +131,16 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 .pastilla{font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
 .pastilla.ok{background:var(--ok-fondo);color:var(--ok)}
 .pastilla.falta{background:#FFF4D6;color:#8A6400}
+.chips-acc{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.chips-acc button{min-height:44px;padding:0 14px;border-radius:22px;border:1.5px dashed #9AA6AD;background:#fff;font-weight:600;font-size:14px}
+.otro-acc{display:flex;gap:8px}
+.otro-acc input{flex:1;min-width:0}
+.otro-acc .btn{width:auto;min-height:52px;padding:0 16px;font-size:16px}
+.acc{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:8px 10px 8px 14px;margin-bottom:8px}
+.acc .n{flex:1;font-weight:600;font-size:16px;min-width:0}
+.acc .quitar{color:var(--dano);font-size:14px;font-weight:600;min-height:44px;padding:0 4px}
+.acc .contador button{width:44px;height:44px;font-size:24px}
+.acc .contador output{min-width:40px;font-size:26px}
 .vacio{text-align:center;color:var(--gris);padding:26px 10px;font-size:15px}
 .cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .cifras div{background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:10px;text-align:center}
@@ -286,26 +296,27 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
       <div class="titulo-sec"><span>Datos del rack</span></div>
       <div class="tarjeta">
         <label class="campo"><span>Qué guarda</span><input id="inQue" type="text" placeholder="Ej.: Cabezas Maverick"/></label>
-        <label class="campo"><span>Cómo le dicen hoy (marca vieja)</span><input id="inMarca" type="text" placeholder="Ej.: Rack azul"/></label>
         <div class="fila-contador">
           <div><div class="nombre">Caben</div><div class="ayuda">Equipos que le caben al rack</div></div>
           <div class="contador" data-campo="caben"><button type="button" data-d="-1" aria-label="Menos">−</button><output id="outCaben">0</output><button type="button" data-d="1" aria-label="Más">+</button></div>
-        </div>
-        <div style="margin-top:10px">
-          <span style="display:block;font-size:14px;font-weight:600;color:var(--gris);margin-bottom:5px">Dónde está</span>
-          <div class="segmento" id="segUbicacion">
-            <button type="button" data-v="Bodega" aria-pressed="true">Bodega</button>
-            <button type="button" data-v="En evento" aria-pressed="false">En evento</button>
-            <button type="button" data-v="Mantenimiento" aria-pressed="false">Mantenim.</button>
-          </div>
         </div>
       </div>
     </div>
 
     <div class="seccion">
-      <div class="titulo-sec"><span>Qué tiene adentro</span><span id="ocupacion"></span></div>
+      <div class="titulo-sec"><span>Equipos</span><span id="ocupacion"></span></div>
       <div id="listaContenido"></div>
       <button class="btn btn-borde" id="btnAgregar">+ Agregar equipo</button>
+    </div>
+
+    <div class="seccion">
+      <div class="titulo-sec"><span>Accesorios</span><span id="totAcc"></span></div>
+      <div id="listaAcc"></div>
+      <div class="chips-acc" id="chipsAcc"></div>
+      <div class="otro-acc">
+        <input type="text" id="inAccOtro" placeholder="Otro accesorio: ej. cable de poder 10 m" autocomplete="off"/>
+        <button type="button" class="btn btn-borde" id="btnAccOtro">Agregar</button>
+      </div>
     </div>
 
     <div class="seccion">
@@ -438,7 +449,7 @@ async function procesarCola(){
   }finally{enviando=false;pintarCola();}
 }
 async function enviarTrabajo(job){
-  // 1. datos del rack  2. contenido  3. fotos (cada una se marca al subir)
+  // 1. datos del rack  2. contenido  3. accesorios  4. fotos (cada una se marca al subir)
   if(!job.rackOk){
     const r=await sb.rpc('bod_guardar_rack',{payload:job.rack}); if(r.error)throw r.error;
     job.rackOk=true; await colaPoner(job);
@@ -446,6 +457,10 @@ async function enviarTrabajo(job){
   if(!job.contenidoOk&&job.items){
     const r=await sb.rpc('bod_guardar_contenido',{p_rack:job.rack.codigo,p_items:job.items}); if(r.error)throw r.error;
     job.contenidoOk=true; await colaPoner(job);
+  }
+  if(!job.accOk&&job.acc){
+    const r=await sb.rpc('bod_guardar_accesorios',{p_rack:job.rack.codigo,p_items:job.acc}); if(r.error)throw r.error;
+    job.accOk=true; await colaPoner(job);
   }
   for(const f of job.fotos){
     if(f.ok)continue;
@@ -680,21 +695,23 @@ document.querySelectorAll('.hoja').forEach(h=>{h.addEventListener('click',e=>{if
 async function abrirRack(codigo){
   if(!RE_CODIGO.test(codigo)){aviso('Código no válido: '+codigo,true);return;}
   const pre=codigo.slice(0,3);
-  rack={codigo,pre,nuevo:true,datos:{que_guarda:'',marca_actual:'',caben:0,ubicacion:'Bodega',observaciones:''},items:[],fotosNuevas:[],fotosPrevias:[],cambios:false};
+  rack={codigo,pre,nuevo:true,datos:{que_guarda:'',marca_actual:'',caben:0,ubicacion:'Bodega',observaciones:''},items:[],acc:[],fotosNuevas:[],fotosPrevias:[],cambios:false};
   $('vInicio').classList.add('oculto');$('vRack').classList.remove('oculto');$('pieRack').classList.remove('oculto');$('btnAtras').classList.remove('oculto');
   document.documentElement.style.setProperty('--area',`var(--${pre})`);
   window.scrollTo(0,0); pintarRack();
   if(!equipos.length)await cargarEquipos().catch(()=>{});
   try{
-    const [r,c,f]=await Promise.all([
+    const [r,c,f,ac]=await Promise.all([
       sb.from('bod_racks').select('*').eq('codigo',codigo).maybeSingle(),
       sb.from('bod_rack_contenido').select('ref,cantidad,danados,seriales,notas').eq('rack_codigo',codigo).order('ref'),
-      sb.from('bod_fotos').select('id,tipo,path,ref,creado_en,tomado_por_nombre').eq('rack_codigo',codigo).order('creado_en',{ascending:false}).limit(30)
+      sb.from('bod_fotos').select('id,tipo,path,ref,creado_en,tomado_por_nombre').eq('rack_codigo',codigo).order('creado_en',{ascending:false}).limit(30),
+      sb.from('bod_rack_accesorios').select('nombre,cantidad').eq('rack_codigo',codigo).order('nombre')
     ]);
     if(rack&&rack.codigo===codigo&&!rack.cambios){
       if(r.data){rack.nuevo=false;Object.assign(rack.datos,{que_guarda:r.data.que_guarda||'',marca_actual:r.data.marca_actual||'',caben:r.data.caben||0,ubicacion:r.data.ubicacion,observaciones:r.data.observaciones||''});rack.creado=r.data;}
       rack.items=(c.data||[]).map(x=>({...x,seriales:x.seriales||'',notas:x.notas||''}));
       rack.fotosPrevias=f.data||[];
+      rack.acc=(ac.data||[]).map(x=>({nombre:x.nombre,cantidad:x.cantidad}));
       pintarRack(); firmarPrevias();
     }
   }catch(e){aviso('Sin conexión: se muestra el rack vacío. Lo que guarde se envía al volver la señal.',true);}
@@ -702,13 +719,11 @@ async function abrirRack(codigo){
 function pintarRack(){
   const r=rack,d=r.datos;
   $('cabRack').innerHTML=`<span class="cinta" style="--area:var(--${r.pre})"><span class="franja"></span><span class="codigo">${r.codigo}</span></span><span class="area" style="--area:var(--${r.pre})">${AREAS[r.pre]}</span>`;
-  $('estadoRack').textContent=r.nuevo?'Rack nuevo: llene los datos, tome las fotos y agregue lo que tiene adentro.':`Registrado por ${r.creado?.creado_por_nombre||'—'}. Lo que cambie queda en su hoja de vida.`;
-  $('inQue').value=d.que_guarda; $('inMarca').value=d.marca_actual; $('outCaben').textContent=d.caben; $('inObs').value=d.observaciones;
-  $('segUbicacion').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===d.ubicacion));
-  pintarFotos(); pintarContenido();
+  $('estadoRack').textContent=r.nuevo?'Rack nuevo: escriba qué guarda, agregue los equipos y accesorios que tiene adentro y tome las fotos.':`Registrado por ${r.creado?.creado_por_nombre||'—'}. Lo que cambie queda en su hoja de vida.`;
+  $('inQue').value=d.que_guarda; $('outCaben').textContent=d.caben; $('inObs').value=d.observaciones;
+  pintarFotos(); pintarContenido(); pintarAcc();
 }
-['inQue','inMarca','inObs'].forEach(id=>$(id).addEventListener('input',()=>{rack.cambios=true;rack.datos[{inQue:'que_guarda',inMarca:'marca_actual',inObs:'observaciones'}[id]]=$(id).value;}));
-$('segUbicacion').querySelectorAll('button').forEach(b=>b.onclick=()=>{rack.cambios=true;rack.datos.ubicacion=b.dataset.v;$('segUbicacion').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+['inQue','inObs'].forEach(id=>$(id).addEventListener('input',()=>{rack.cambios=true;rack.datos[{inQue:'que_guarda',inObs:'observaciones'}[id]]=$(id).value;}));
 document.querySelector('[data-campo=caben]').addEventListener('click',e=>{const d=+e.target.dataset.d;if(!d)return;rack.cambios=true;rack.datos.caben=Math.max(0,rack.datos.caben+d);$('outCaben').textContent=rack.datos.caben;pintarResumen();});
 
 // Fotos
@@ -804,6 +819,37 @@ function pintarResumen(){
   $('ocupacion').style.color=cab&&u>cab?'var(--dano)':'';
 }
 
+// Accesorios: van dentro del rack con los equipos (cables, clamps...). No son
+// equipos del inventario: nombre y cantidad. No salen en la etiqueta.
+const ACC_COMUNES=['Cable de poder','Cable powerCON','Cable DMX','Cable XLR','Cable de red (RJ45)','Cable de video','Clamp / omega','Guaya de seguridad','Regleta / multitoma','Control remoto'];
+function pintarAcc(){
+  const a=rack.acc;
+  $('totAcc').textContent=a.length?a.reduce((n,x)=>n+x.cantidad,0)+' en total':'';
+  $('listaAcc').innerHTML=a.length?a.map((x,i)=>`<div class="acc" data-i="${i}"><span class="n">${esc(x.nombre)}</span>
+    <div class="contador"><button data-acc="menos" aria-label="Menos">−</button><output>${x.cantidad}</output><button data-acc="mas" aria-label="Más">+</button></div>
+    <button class="quitar" data-acc="quitar" aria-label="Quitar ${esc(x.nombre)}">Quitar</button></div>`).join('')
+    :'<div class="vacio" style="padding:10px">Toque un accesorio para agregarlo, o escriba otro abajo.</div>';
+  const ya=new Set(a.map(x=>x.nombre.toLowerCase()));
+  $('chipsAcc').innerHTML=ACC_COMUNES.filter(n=>!ya.has(n.toLowerCase())).map(n=>`<button type="button" data-n="${esc(n)}">+ ${esc(n)}</button>`).join('');
+}
+function agregarAcc(nombre){
+  nombre=nombre.trim().replace(/\s+/g,' '); if(!nombre)return;
+  nombre=nombre.charAt(0).toUpperCase()+nombre.slice(1);
+  const ex=rack.acc.find(x=>x.nombre.toLowerCase()===nombre.toLowerCase());
+  if(ex)ex.cantidad++; else rack.acc.push({nombre,cantidad:1});
+  rack.cambios=true; pintarAcc();
+}
+$('chipsAcc').addEventListener('click',e=>{const b=e.target.closest('button');if(b)agregarAcc(b.dataset.n);});
+$('btnAccOtro').onclick=()=>{agregarAcc($('inAccOtro').value);$('inAccOtro').value='';};
+$('inAccOtro').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('btnAccOtro').click();}});
+$('listaAcc').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return; const i=+b.closest('.acc').dataset.i, x=rack.acc[i];
+  if(b.dataset.acc==='mas')x.cantidad++;
+  else if(b.dataset.acc==='menos'){if(x.cantidad>1)x.cantidad--;else return;}
+  else if(b.dataset.acc==='quitar')rack.acc.splice(i,1);
+  rack.cambios=true; pintarAcc();
+});
+
 // Selector de equipos
 $('btnAgregar').onclick=()=>{$('buscarEq').value='';pintarSelector();abrirHoja('hojaEquipos');};
 $('buscarEq').oninput=pintarSelector;
@@ -838,11 +884,12 @@ $('btnGuardar').onclick=async()=>{
   if(!d.que_guarda.trim())avisos.push('qué guarda el rack');
   if(faltaFotos.length)avisos.push(faltaFotos.length===2?'las dos fotos del rack':'la foto del rack '+faltaFotos[0]);
   if(faltaFotoDano.length)avisos.push('la foto del daño de '+faltaFotoDano.map(i=>equipo(i.ref).nombre).join(', '));
-  if(!r.items.length)avisos.push('lo que tiene adentro');
+  if(!r.items.length)avisos.push('los equipos que tiene adentro');
   if(avisos.length&&!confirm('Falta: '+avisos.join('; ')+'.\n\n¿Guardar así y completarlo después?'))return;
   const job={id:uuid(),creado:Date.now(),
     rack:{codigo:r.codigo,que_guarda:d.que_guarda,marca_actual:d.marca_actual,caben:d.caben||null,ubicacion:d.ubicacion,observaciones:d.observaciones},
     items:r.items.map(i=>({ref:i.ref,cantidad:i.cantidad,danados:i.danados,seriales:i.seriales,notas:i.notas})),
+    acc:r.acc.map(a=>({nombre:a.nombre,cantidad:a.cantidad})),
     fotos:r.fotosNuevas.map(f=>({uuid:f.uuid,tipo:f.tipo,ref:f.ref,nota:f.nota,path:f.path,blob:f.blob}))};
   const b=$('btnGuardar'); b.disabled=true; b.textContent='Guardando…';
   try{await colaPoner(job);}catch(e){aviso('No se pudo guardar en el celular: '+e.message,true);b.disabled=false;b.textContent='Guardar rack';return;}
