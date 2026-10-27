@@ -2,6 +2,23 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
+<script>
+// ══ Bodega: enlaces de correo de usuarios de bodega ═══════════════════════
+// Las invitaciones y recuperaciones de contraseña de Supabase llegan aquí (es
+// la dirección principal del proyecto). Si el enlace es de alguien con rol
+// "bodega", se le pasa a la app de bodega CON el mismo enlace, para que elija
+// su contraseña allá. Se lee el hash antes de que el cotizador lo consuma.
+(function(){
+  var h=location.hash||'';
+  if(!/type=(invite|recovery|signup|magiclink)/.test(h))return;
+  var m=h.match(/access_token=([^&]+)/); if(!m)return;
+  fetch('https://vzqbieygdablitjajrem.supabase.co/rest/v1/rpc/bod_yo',{method:'POST',
+    headers:{'apikey':'sb_publishable_mFnZrCeHfkGR5UFYzgQCcw_c14Zrf3h','Authorization':'Bearer '+decodeURIComponent(m[1]),'Content-Type':'application/json'},body:'{}'})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){if(d&&d.rol==='bodega')location.replace('bodega/'+h);})
+    .catch(function(){});
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Cotizador Nova Productions</title>
 <link rel="manifest" href="manifest.json"/>
@@ -3618,6 +3635,8 @@ async function tkvGuardar(id,estadoForzado){
       // Rol de quien entró: el botón es para administración y gerencia.
       const r=await sb.rpc('bod_yo'); if(r.error)return;
       const admin=!!(r.data&&['admin','gerente'].includes(r.data.rol));
+      // Quien es de bodega trabaja en su app: se le lleva allá.
+      if(r.data&&r.data.rol==='bodega'){location.replace('bodega/');return;}
       try{localStorage.setItem(CLAVE,JSON.stringify({email:correo,admin}));}catch(e){}
       mostrar(admin);
     }catch(e){}
