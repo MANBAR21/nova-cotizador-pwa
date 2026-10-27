@@ -165,6 +165,11 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 .opcion{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--linea);border-radius:8px;padding:12px;margin-bottom:6px;min-height:56px}
 .opcion b{display:block;font-weight:600;font-size:15px}
 .opcion small{color:var(--gris);font-size:13px}
+.opcion.agotado{background:transparent;border-style:dashed}
+.opcion.agotado b{color:var(--gris)}
+.opcion.agotado small{color:var(--dano)}
+.fila-contador .ayuda.mal{color:var(--dano);font-weight:600}
+.banda .botones{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}
 .grupo-lista{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gris);font-size:14px;margin:14px 0 6px}
 .teclado-cod{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
 .teclado-cod button{min-height:54px;border-radius:8px;border:1.5px solid var(--linea);background:#fff;font-family:var(--cond);font-weight:700;font-size:20px}
@@ -422,6 +427,8 @@ let yo=null;            // {nombre, rol}
 let equipos=[];         // catálogo bod_equipos
 let racks=[];           // bod_racks + resumen
 let filtroArea='';
+// Qué hay en todos los racks (rack, ref, cantidad, seriales): una unidad solo puede estar en un rack.
+let ocupado=[]; try{ocupado=JSON.parse(localStorage.getItem('bodegaOcupado')||'[]');}catch(e){}
 let rack=null;          // rack abierto: {codigo, nuevo, datos, items:[], fotosNuevas:[], fotosPrevias:[]}
 
 // ── Avisos ──────────────────────────────────────────────────────
@@ -455,7 +462,14 @@ async function enviarTrabajo(job){
     job.rackOk=true; await colaPoner(job);
   }
   if(!job.contenidoOk&&job.items){
-    const r=await sb.rpc('bod_guardar_contenido',{p_rack:job.rack.codigo,p_items:job.items}); if(r.error)throw r.error;
+    const r=await sb.rpc('bod_guardar_contenido',{p_rack:job.rack.codigo,p_items:job.items});
+    if(r.error){
+      // La base lo rechazó por una regla (p. ej. equipos que ya están en otro rack): no se reintenta,
+      // se deja aparte para corregirlo y el resto (accesorios y fotos) sigue.
+      if(r.error.hint!=='regla_bodega')throw r.error;
+      ponerRechazo(job.rack.codigo,{items:job.items,msg:r.error.message,cuando:Date.now()});
+      job.rechazado=r.error.message;
+    }else quitarRechazo(job.rack.codigo);
     job.contenidoOk=true; await colaPoner(job);
   }
   if(!job.accOk&&job.acc){
@@ -474,14 +488,27 @@ async function enviarTrabajo(job){
     f.ok=true; f.blob=null; await colaPoner(job);
   }
 }
+// Contenidos que la base rechazó: quedan en el celular hasta corregirlos.
+function leerRechazos(){try{return JSON.parse(localStorage.getItem('bodegaRechazos')||'{}');}catch(e){return {};}}
+function ponerRechazo(cod,x){const r=leerRechazos();r[cod]=x;try{localStorage.setItem('bodegaRechazos',JSON.stringify(r));}catch(e){}}
+function quitarRechazo(cod){const r=leerRechazos();if(!r[cod])return;delete r[cod];try{localStorage.setItem('bodegaRechazos',JSON.stringify(r));}catch(e){}}
 async function pintarCola(){
   let jobs=[];try{jobs=await colaTodos();}catch(e){}
+  colaCache=jobs;
   const b=$('bandaCola');
-  if(!jobs.length){b.innerHTML='';return;}
+  const rech=leerRechazos();
+  const htmlRech=Object.entries(rech).map(([cod,x])=>`<div class="banda error"><span><b>${esc(cod)}: los equipos no se guardaron.</b><br><small>${esc(x.msg)}</small></span><span class="botones"><button data-corregir="${esc(cod)}">Corregir</button><button data-descartar="${esc(cod)}">Descartar</button></span></div>`).join('');
+  if(!jobs.length){b.innerHTML=htmlRech;enlazarRechazos();return;}
   const fotos=jobs.reduce((n,j)=>n+j.fotos.filter(f=>!f.ok).length,0);
   const err=jobs.find(j=>j.error);
-  b.innerHTML=`<div class="banda ${err&&navigator.onLine?'error':'pendiente'}"><span>${jobs.length} rack${jobs.length>1?'s':''} y ${fotos} foto${fotos!==1?'s':''} por enviar${navigator.onLine?'':' (sin señal)'}${err&&navigator.onLine?'<br><small>'+esc(err.error)+'</small>':''}</span>${navigator.onLine?'<button id="btnReintentar">Enviar ya</button>':''}</div>`;
+  b.innerHTML=`<div class="banda ${err&&navigator.onLine?'error':'pendiente'}"><span>${jobs.length} rack${jobs.length>1?'s':''} y ${fotos} foto${fotos!==1?'s':''} por enviar${navigator.onLine?'':' (sin señal)'}${err&&navigator.onLine?'<br><small>'+esc(err.error)+'</small>':''}</span>${navigator.onLine?'<button id="btnReintentar">Enviar ya</button>':''}</div>`+htmlRech;
   const br=$('btnReintentar'); if(br)br.onclick=()=>procesarCola();
+  enlazarRechazos();
+}
+function enlazarRechazos(){
+  const b=$('bandaCola');
+  b.querySelectorAll('[data-corregir]').forEach(x=>x.onclick=()=>{const r=leerRechazos()[x.dataset.corregir];if(r)abrirRack(x.dataset.corregir,r.items);});
+  b.querySelectorAll('[data-descartar]').forEach(x=>x.onclick=()=>{if(!confirm('¿Descartar los equipos que no se guardaron en '+x.dataset.descartar+'? El rack queda como está en el sistema.'))return;quitarRechazo(x.dataset.descartar);pintarCola();});
 }
 window.addEventListener('online',()=>{procesarCola();pintarCola();});
 window.addEventListener('offline',pintarCola);
@@ -564,15 +591,20 @@ async function cargarEquipos(){
 async function cargarRacks(){
   const [r,c,f]=await Promise.all([
     sb.from('bod_racks').select('codigo,area,que_guarda,marca_actual,caben,ubicacion,actualizado_en').order('codigo'),
-    sb.from('bod_rack_contenido').select('rack_codigo,cantidad,danados'),
+    sb.from('bod_rack_contenido').select('rack_codigo,ref,cantidad,danados,seriales'),
     sb.from('bod_fotos').select('rack_codigo,tipo')
   ]);
   if(r.error)throw r.error;
+  if(!c.error)guardarOcupado(c.data||[]);
   const cont={},fot={};
   (c.data||[]).forEach(x=>{const o=cont[x.rack_codigo]||(cont[x.rack_codigo]={u:0,d:0,n:0});o.u+=x.cantidad;o.d+=x.danados;o.n++;});
   (f.data||[]).forEach(x=>{const o=fot[x.rack_codigo]||(fot[x.rack_codigo]={});o[x.tipo]=(o[x.tipo]||0)+1;});
   racks=r.data.map(x=>({...x,cont:cont[x.codigo]||{u:0,d:0,n:0},fotos:fot[x.codigo]||{}}));
   localStorage.setItem('bodegaRacks',JSON.stringify(racks));
+}
+function guardarOcupado(filas){
+  ocupado=filas.map(x=>({rack:x.rack_codigo,ref:x.ref,cantidad:x.cantidad,seriales:x.seriales||''}));
+  try{localStorage.setItem('bodegaOcupado',JSON.stringify(ocupado));}catch(e){}
 }
 
 // ── Inicio ─────────────────────────────────────────────────────
@@ -692,8 +724,9 @@ function cerrarHoja(id){$(id).classList.add('oculto');}
 document.querySelectorAll('.hoja').forEach(h=>{h.addEventListener('click',e=>{if(e.target===h||e.target.hasAttribute('data-cerrar'))cerrarHoja(h.id);});});
 
 // ── Rack ───────────────────────────────────────────────────────
-async function abrirRack(codigo){
+async function abrirRack(codigo,borrador){
   if(!RE_CODIGO.test(codigo)){aviso('Código no válido: '+codigo,true);return;}
+  colaTodos().then(j=>{colaCache=j;}).catch(()=>{});
   const pre=codigo.slice(0,3);
   rack={codigo,pre,nuevo:true,datos:{que_guarda:'',marca_actual:'',caben:0,ubicacion:'Bodega',observaciones:''},items:[],acc:[],fotosNuevas:[],fotosPrevias:[],cambios:false};
   $('vInicio').classList.add('oculto');$('vRack').classList.remove('oculto');$('pieRack').classList.remove('oculto');$('btnAtras').classList.remove('oculto');
@@ -701,12 +734,14 @@ async function abrirRack(codigo){
   window.scrollTo(0,0); pintarRack();
   if(!equipos.length)await cargarEquipos().catch(()=>{});
   try{
-    const [r,c,f,ac]=await Promise.all([
+    const [r,c,f,ac,todo]=await Promise.all([
       sb.from('bod_racks').select('*').eq('codigo',codigo).maybeSingle(),
       sb.from('bod_rack_contenido').select('ref,cantidad,danados,seriales,notas').eq('rack_codigo',codigo).order('ref'),
       sb.from('bod_fotos').select('id,tipo,path,ref,creado_en,tomado_por_nombre').eq('rack_codigo',codigo).order('creado_en',{ascending:false}).limit(30),
-      sb.from('bod_rack_accesorios').select('nombre,cantidad').eq('rack_codigo',codigo).order('nombre')
+      sb.from('bod_rack_accesorios').select('nombre,cantidad').eq('rack_codigo',codigo).order('nombre'),
+      sb.from('bod_rack_contenido').select('rack_codigo,ref,cantidad,seriales')
     ]);
+    if(!todo.error)guardarOcupado(todo.data||[]);
     if(rack&&rack.codigo===codigo&&!rack.cambios){
       if(r.data){rack.nuevo=false;Object.assign(rack.datos,{que_guarda:r.data.que_guarda||'',marca_actual:r.data.marca_actual||'',caben:r.data.caben||0,ubicacion:r.data.ubicacion,observaciones:r.data.observaciones||''});rack.creado=r.data;}
       rack.items=(c.data||[]).map(x=>({...x,seriales:x.seriales||'',notas:x.notas||''}));
@@ -715,6 +750,12 @@ async function abrirRack(codigo){
       pintarRack(); firmarPrevias();
     }
   }catch(e){aviso('Sin conexión: se muestra el rack vacío. Lo que guarde se envía al volver la señal.',true);}
+  if(borrador&&rack&&rack.codigo===codigo){
+    // Viene de «Corregir»: se cargan los equipos que no se guardaron para ajustarlos.
+    rack.items=borrador.map(i=>({ref:i.ref,cantidad:i.cantidad,danados:i.danados||0,seriales:i.seriales||'',notas:i.notas||''}));
+    rack.cambios=true; pintarContenido();
+    aviso('Estos son los equipos que no se guardaron. Corrija lo que sale en rojo y toque «Guardar rack».',true);
+  }
 }
 function pintarRack(){
   const r=rack,d=r.datos;
@@ -779,6 +820,37 @@ async function comprimir(file){
 
 // Contenido
 function equipo(ref){return equipos.find(e=>e.ref===ref)||{ref,nombre:'Ref. '+ref,grupo:'',area:''};}
+// Una unidad solo puede estar en un rack. Lo que está en el celular sin enviar cuenta
+// como lo último de ese rack. El rack abierto no se cuenta.
+function enOtrosRacks(ref){
+  const porRack={};
+  ocupado.forEach(x=>{if(x.ref===ref)porRack[x.rack]={cantidad:x.cantidad,seriales:x.seriales||''};});
+  [...colaCache].sort((a,b)=>a.creado-b.creado).forEach(j=>{
+    if(!j.items||j.contenidoOk||!j.rack)return;
+    const it=j.items.find(i=>i.ref===ref);
+    if(it)porRack[j.rack.codigo]={cantidad:it.cantidad,seriales:it.seriales||''}; else delete porRack[j.rack.codigo];
+  });
+  if(rack)delete porRack[rack.codigo];
+  return Object.entries(porRack).map(([r,v])=>({rack:r,...v})).sort((a,b)=>a.rack.localeCompare(b.rack));
+}
+function libres(ref){
+  const e=equipo(ref); if(e.total==null)return Infinity;
+  return Math.max(0,e.total-enOtrosRacks(ref).reduce((n,x)=>n+x.cantidad,0));
+}
+const dondeTxt=l=>l.map(x=>`${x.rack} (${x.cantidad})`).join(', ');
+const seriales=s=>String(s||'').split(/[,;\n]+/).map(x=>x.trim().toUpperCase()).filter(Boolean);
+function serialRepetido(it){
+  const mios=new Set(seriales(it.seriales)); if(!mios.size)return null;
+  for(const o of enOtrosRacks(it.ref))for(const s of seriales(o.seriales))if(mios.has(s))return {serial:s,rack:o.rack};
+  return null;
+}
+// Lo que impide guardar el rack (equipos de más o seriales repetidos), con el texto para mostrar.
+function problemaDe(it){
+  const e=equipo(it.ref), l=libres(it.ref);
+  if(it.cantidad>l){const o=enOtrosRacks(it.ref);return `${e.nombre}: hay ${e.total} en el inventario y ${e.total-l} ya están en ${dondeTxt(o)}. Aquí caben máximo ${l}.`;}
+  const s=serialRepetido(it); if(s)return `${e.nombre}: el serial ${s.serial} ya está en ${s.rack}.`;
+  return null;
+}
 const PIDE_SERIAL=/Cabezas|Consolas|Láser|inalámbricos|monitoreo|Procesadores|Distros/i;
 function pintarContenido(){
   const cont=$('listaContenido');
@@ -787,13 +859,17 @@ function pintarContenido(){
     const e=equipo(it.ref), pre=AREA_DE_EQUIPO[e.area]||rack.pre;
     const fotosDano=rack.fotosNuevas.filter(f=>f.tipo==='dano'&&f.ref===it.ref).length+rack.fotosPrevias.filter(f=>f.tipo==='dano'&&f.ref===it.ref).length;
     const verSerial=it.seriales||PIDE_SERIAL.test(e.grupo);
-    return `<div class="equipo${it.danados?' con-dano':''}" style="--area:var(--${pre},var(--grafito))" data-i="${i}">
+    const otros=enOtrosRacks(it.ref), l=libres(it.ref), deMas=it.cantidad>l, rep=serialRepetido(it);
+    const ayudaCant=deMas?`Solo caben ${l}: ${dondeTxt(otros)} ya ${otros.reduce((n,x)=>n+x.cantidad,0)===1?'tiene':'tienen'} el resto`
+      :otros.length?`De ${e.total}: ${dondeTxt(otros)} en otro rack. Aquí hasta ${l}`
+      :(e.total!=null?`${e.total} en el inventario`:'');
+    return `<div class="equipo${it.danados||deMas||rep?' con-dano':''}" style="--area:var(--${pre},var(--grafito))" data-i="${i}">
       <div class="cab"><div><div class="ref">${e.ref}</div><div class="nom">${esc(e.nombre)}</div></div><button class="quitar" data-acc="quitar">Quitar</button></div>
-      <div class="fila-contador"><div class="nombre">Cantidad</div><div class="contador"><button data-acc="cant" data-d="-1" aria-label="Menos">−</button><output>${it.cantidad}</output><button data-acc="cant" data-d="1" aria-label="Más">+</button></div></div>
+      <div class="fila-contador"><div><div class="nombre">Cantidad</div>${ayudaCant?`<div class="ayuda${deMas?' mal':''}">${esc(ayudaCant)}</div>`:''}</div><div class="contador"><button data-acc="cant" data-d="-1" aria-label="Menos">−</button><output>${it.cantidad}</output><button data-acc="cant" data-d="1" aria-label="Más">+</button></div></div>
       <div class="fila-contador"><div><div class="nombre">Dañados</div><div class="ayuda">0 si todos funcionan</div></div><div class="contador"><button data-acc="dan" data-d="-1" aria-label="Menos">−</button><output>${it.danados}</output><button data-acc="dan" data-d="1" aria-label="Más">+</button></div></div>
       ${it.danados?`<div class="aviso-dano"><span>${fotosDano?fotosDano+' foto'+(fotosDano>1?'s':'')+' del daño':'Falta la foto del daño'}</span><button data-acc="fotodano">${fotosDano?'Otra foto':'Tomar foto'}</button></div>`:''}
       <div class="extra">
-        ${verSerial?`<label class="campo"><span>Seriales (separados por coma)</span><input type="text" data-acc="ser" value="${esc(it.seriales)}" placeholder="Ej.: MSH0231, MSH0232"/></label>`:''}
+        ${verSerial?`<label class="campo"><span>Seriales (separados por coma)</span><input type="text" data-acc="ser" value="${esc(it.seriales)}" placeholder="Ej.: MSH0231, MSH0232"/></label><div class="aviso-serial">${avisoSerial(rep)}</div>`:''}
         <label class="campo" style="margin-bottom:0"><span>Daños o notas</span><input type="text" data-acc="nota" value="${esc(it.notas)}" placeholder="Ej.: 1 con lente rayado"/></label>
       </div>
     </div>`;}).join('');
@@ -802,7 +878,14 @@ function pintarContenido(){
 $('listaContenido').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b)return; const card=b.closest('.equipo'); const it=rack.items[+card.dataset.i];
   const acc=b.dataset.acc, d=+b.dataset.d||0;
-  if(acc==='cant'){it.cantidad=Math.max(1,it.cantidad+d);it.danados=Math.min(it.danados,it.cantidad);}
+  if(acc==='cant'){
+    if(d>0&&it.cantidad>=libres(it.ref)){
+      const e=equipo(it.ref),o=enOtrosRacks(it.ref);
+      aviso(o.length?`No caben más: de ${e.total} ${e.nombre}, ${dondeTxt(o)} ya ${o.length>1?'tienen':'tiene'} el resto.`:`En el inventario solo hay ${e.total}.`,true);
+      return;
+    }
+    it.cantidad=Math.max(1,it.cantidad+d);it.danados=Math.min(it.danados,it.cantidad);
+  }
   else if(acc==='dan'){it.danados=Math.min(it.cantidad,Math.max(0,it.danados+d));}
   else if(acc==='quitar'){if(!confirm('¿Quitar '+equipo(it.ref).nombre+' de este rack?'))return;rack.items.splice(+card.dataset.i,1);}
   else if(acc==='fotodano'){pedirFoto({tipo:'dano',ref:it.ref,nota:it.notas});return;}
@@ -811,6 +894,13 @@ $('listaContenido').addEventListener('click',e=>{
 $('listaContenido').addEventListener('input',e=>{
   const card=e.target.closest('.equipo'); if(!card)return; const it=rack.items[+card.dataset.i];
   if(e.target.dataset.acc==='ser')it.seriales=e.target.value; if(e.target.dataset.acc==='nota')it.notas=e.target.value; rack.cambios=true;
+});
+// Al terminar de escribir los seriales se revisa que no estén en otro rack (solo se toca el aviso de esa tarjeta).
+function avisoSerial(rep){return rep?`<div class="aviso-dano" style="margin:-4px 0 10px"><span>El serial ${esc(rep.serial)} ya está en ${esc(rep.rack)}.</span></div>`:'';}
+$('listaContenido').addEventListener('change',e=>{
+  if(e.target.dataset.acc!=='ser')return;
+  const card=e.target.closest('.equipo'), it=rack.items[+card.dataset.i], av=card.querySelector('.aviso-serial');
+  if(av)av.innerHTML=avisoSerial(serialRepetido(it));
 });
 function pintarResumen(){
   const u=rack.items.reduce((n,i)=>n+i.cantidad,0), cab=rack.datos.caben;
@@ -865,10 +955,12 @@ function pintarSelector(){
   lista.slice(0,q?60:400).forEach(e=>{
     const g=(AREA_DE_EQUIPO[e.area]===rack.pre?'':e.area+' · ')+e.grupo;
     if(g!==grupo){html+=`<div class="grupo-lista">${esc(g)}</div>`;grupo=g;}
-    html+=`<button class="opcion" data-ref="${e.ref}"><b>${esc(e.nombre)}</b><small>Ref. ${e.ref} · ${e.total} en inventario</small></button>`;
+    const l=libres(e.ref), otros=enOtrosRacks(e.ref);
+    if(l<=0) html+=`<button class="opcion agotado" disabled><b>${esc(e.nombre)}</b><small>Ref. ${e.ref} · Ya están en otro rack: ${esc(dondeTxt(otros))}</small></button>`;
+    else html+=`<button class="opcion" data-ref="${e.ref}"><b>${esc(e.nombre)}</b><small>Ref. ${e.ref} · ${otros.length?`quedan ${l} de ${e.total} sin rack (en ${esc(dondeTxt(otros))})`:`${e.total} en inventario`}</small></button>`;
   });
   $('listaEq').innerHTML=html||'<div class="vacio">No aparece ese equipo. Revise cómo está escrito o búsquelo por número.</div>';
-  $('listaEq').querySelectorAll('.opcion').forEach(b=>b.onclick=()=>{
+  $('listaEq').querySelectorAll('.opcion[data-ref]').forEach(b=>b.onclick=()=>{
     rack.items.push({ref:+b.dataset.ref,cantidad:1,danados:0,seriales:'',notas:''}); rack.cambios=true;
     cerrarHoja('hojaEquipos'); pintarContenido();
     const cards=document.querySelectorAll('#listaContenido .equipo'); cards[cards.length-1]?.scrollIntoView({behavior:'smooth',block:'center'});
@@ -878,6 +970,10 @@ function pintarSelector(){
 // Guardar
 $('btnGuardar').onclick=async()=>{
   const r=rack, d=r.datos;
+  // Equipos que ya están en otro rack: no se deja guardar.
+  try{colaCache=await colaTodos();}catch(e){}
+  const problemas=r.items.map(problemaDe).filter(Boolean);
+  if(problemas.length){pintarContenido();alert('No se puede guardar todavía:\n\n'+problemas.join('\n\n')+'\n\nBaje la cantidad, o primero quite esos equipos del otro rack.');return;}
   const faltaFotoDano=r.items.filter(it=>it.danados&&!r.fotosNuevas.some(f=>f.tipo==='dano'&&f.ref===it.ref)&&!r.fotosPrevias.some(f=>f.tipo==='dano'&&f.ref===it.ref));
   const faltaFotos=['cerrado','abierto'].filter(t=>!r.fotosNuevas.some(f=>f.tipo===t)&&!r.fotosPrevias.some(f=>f.tipo===t));
   const avisos=[];
@@ -897,7 +993,9 @@ $('btnGuardar').onclick=async()=>{
   await procesarCola();
   const quedo=(await colaTodos()).some(j=>j.id===job.id);
   b.disabled=false; b.textContent='Guardar rack';
-  aviso(quedo?'Guardado en el celular. Se envía cuando haya señal.':`Rack ${job.rack.codigo} guardado.`);
+  const rech=leerRechazos()[job.rack.codigo];
+  if(rech&&rech.cuando>=job.creado)alert(`El rack ${job.rack.codigo} se guardó, pero sus equipos no:\n\n${rech.msg}\n\nEn la pantalla de inicio toque «Corregir».`);
+  else aviso(quedo?'Guardado en el celular. Se envía cuando haya señal.':`Rack ${job.rack.codigo} guardado.`);
   irInicio();
 };
 $('btnAtras').onclick=()=>{
