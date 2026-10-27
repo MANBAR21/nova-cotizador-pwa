@@ -7,7 +7,9 @@
 <title>Bodega Nova</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="icon" href="icon-192.png"/>
-<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-title" content="Bodega Nova"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
 <style>
 @font-face{font-family:"Barlow Condensed";font-weight:600;font-display:swap;src:url(vendor/fonts/barlow-condensed-latin-600-normal.woff2) format("woff2")}
 @font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(vendor/fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
@@ -34,7 +36,16 @@ button{cursor:pointer;border:0;background:none}
 /* Barra superior */
 .barra{position:sticky;top:0;z-index:20;background:var(--grafito);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px}
 .barra h1{font-family:var(--cond);font-weight:700;font-size:22px;letter-spacing:.5px;text-transform:uppercase;flex:1}
-.barra h1 span{color:var(--cinta)}
+.barra h1{border-left:3px solid var(--cinta);padding-left:10px}
+.logo-barra{background:#fff;border-radius:3px;width:38px;height:50px;display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden}
+.logo-barra img{width:34px;height:46px;object-fit:contain;display:block}
+.btn-apps{color:#fff;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
+.btn-apps svg{width:22px;height:22px}
+.app-op{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:12px;margin-bottom:8px;min-height:72px;text-decoration:none;color:inherit}
+.app-op img{width:48px;height:48px;border-radius:10px;object-fit:cover;flex:none}
+.app-op b{display:block;font-size:17px}
+.app-op small{color:var(--gris);font-size:14px}
+.app-op.actual{border:2px solid var(--grafito)}
 .barra .quien{font-size:14px;color:#C9D2D8;text-align:right;line-height:1.2}
 .barra .atras{color:#fff;font-size:28px;line-height:1;width:44px;height:44px;margin-left:-8px;border-radius:8px}
 
@@ -230,8 +241,10 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
 <div id="vApp" class="oculto">
   <header class="barra">
     <button class="atras oculto" id="btnAtras" aria-label="Volver al inicio">‹</button>
-    <h1>Bodega <span>Nova</span></h1>
+    <div class="logo-barra"><img src="logo-nova.png" alt="Nova Corp Productions"/></div>
+    <h1>Bodega</h1>
     <div class="quien" id="quien"></div>
+    <button class="btn-apps oculto" id="btnApps" aria-label="Cambiar de app"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2.2"/><circle cx="12" cy="5" r="2.2"/><circle cx="19" cy="5" r="2.2"/><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/><circle cx="5" cy="19" r="2.2"/><circle cx="12" cy="19" r="2.2"/><circle cx="19" cy="19" r="2.2"/></svg></button>
   </header>
 
   <!-- INICIO -->
@@ -323,6 +336,14 @@ input:focus,textarea:focus{outline:none;border-color:var(--nova);box-shadow:0 0 
       <input type="search" id="buscarEq" placeholder="Buscar: maverick, 101, truss…" autocomplete="off"/>
       <div id="listaEq"></div>
     </div>
+  </div>
+</div>
+
+<!-- Cambiar de app (solo administradores) -->
+<div class="hoja oculto" id="hojaApps" role="dialog" aria-modal="true" aria-labelledby="tHojaApps">
+  <div class="caja">
+    <div class="cab-hoja"><h2 id="tHojaApps">Apps de Nova</h2><button class="btn-texto" data-cerrar>Cerrar</button></div>
+    <div class="cuerpo" id="listaApps"></div>
   </div>
 </div>
 
@@ -544,6 +565,7 @@ async function irInicio(){
   rack=null;
   $('vInicio').classList.remove('oculto');$('vRack').classList.add('oculto');$('pieRack').classList.add('oculto');$('btnAtras').classList.add('oculto');
   $('quien').innerHTML=yo?esc(yo.nombre):'';
+  $('btnApps').classList.toggle('oculto',!(yo&&yo.rol==='admin'));
   window.scrollTo(0,0);
   racks=JSON.parse(localStorage.getItem('bodegaRacks')||'[]');
   pintarInicio(); pintarCola();
@@ -876,6 +898,20 @@ $('btnImprimirTodos').onclick=async()=>{
   if(r.error){aviso('Sin conexión: no se pudo leer el contenido para imprimir.',true);return;}
   if(!equipos.length)await cargarEquipos().catch(()=>{});
   imprimirHojas(lista.map(x=>({codigo:x.codigo,items:r.data.filter(c=>c.rack_codigo===x.codigo)})));
+};
+
+// ── Cambiar de app (solo para administradores) ─────────────────
+// Las apps de NOVA DASH que viven en el mismo sitio. Para agregar otra,
+// sume una línea con su nombre, dirección e ícono.
+const APPS=[
+  {nombre:'Cotizador Nova',detalle:'Cotizaciones y eventos',url:new URL('../',location.href).href,icono:'../icon-192.png'},
+  {nombre:'Bodega Nova',detalle:'Racks, contenido y fotos',url:new URL('./',location.href).href,icono:'icon-192.png',actual:true},
+];
+$('btnApps').onclick=()=>{
+  $('listaApps').innerHTML=APPS.map(a=>`<a class="app-op${a.actual?' actual':''}" href="${a.actual?'#':esc(a.url)}"${a.actual?' data-cerrar':''}>
+    <img src="${esc(a.icono)}" alt="" style="${a.logo?'background:#fff;object-fit:contain;padding:3px':''}"/>
+    <span><b>${esc(a.nombre)}</b><small>${a.actual?'Está aquí':esc(a.detalle)}</small></span></a>`).join('');
+  abrirHoja('hojaApps');
 };
 
 // ── Arranque ───────────────────────────────────────────────────
