@@ -3569,5 +3569,70 @@ async function tkvGuardar(id,estadoForzado){
   }catch(e){msg.style.color='#C0392B';msg.textContent='No se pudo guardar: '+(e&&e.message||e);}
 }
 </script>
+<!-- ══ Selector de apps de Nova (solo administradores) ══════════════════
+     Bloque independiente: no toca nada del cotizador. Muestra un botón junto
+     al título para pasar a las otras apps de NOVA DASH (por ahora, Bodega).
+     Solo aparece si el usuario es admin (función soy_admin de la base); sin
+     señal usa lo último que supo de ese mismo correo. Para agregar otra app,
+     sume una línea en NOVA_APPS. -->
+<style>
+#novaAppsBtn{margin-left:auto;width:36px;height:36px;border:0;border-radius:6px;background:#f0fbfd;color:#2E9AB3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+#novaAppsBtn:hover{background:#E1F5EE}
+#novaAppsBtn svg{width:18px;height:18px}
+#novaAppsHoja{position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.35);display:flex;align-items:flex-start;justify-content:center;padding:60px 16px}
+#novaAppsHoja .caja{background:#fff;border-radius:10px;width:100%;max-width:360px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-family:Arial,sans-serif}
+#novaAppsHoja .tit{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:14px;font-weight:700;color:#2E9AB3;text-transform:uppercase;letter-spacing:.7px}
+#novaAppsHoja .tit button{border:0;background:none;color:#888;font-size:13px;cursor:pointer}
+#novaAppsHoja a{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e3e7ea;border-radius:8px;margin-bottom:8px;text-decoration:none;color:#1a1a1a}
+#novaAppsHoja a.actual{border:2px solid #2E9AB3;background:#f0fbfd}
+#novaAppsHoja img{width:42px;height:42px;border-radius:9px;object-fit:cover;flex:none}
+#novaAppsHoja b{display:block;font-size:14px}
+#novaAppsHoja small{color:#777;font-size:12px}
+</style>
+<script>
+(function(){
+  'use strict';
+  const NOVA_APPS=[
+    {nombre:'Cotizador Nova',detalle:'Cotizaciones y eventos',url:'./',icono:'icon-192.png',actual:true},
+    {nombre:'Bodega Nova',detalle:'Racks, contenido y fotos',url:'bodega/',icono:'bodega/icon-192.png'},
+  ];
+  const CLAVE='novaAppsAdmin';   // {email, admin}
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const h1=document.querySelector('h1'); if(!h1)return;
+  const btn=document.createElement('button');
+  btn.id='novaAppsBtn'; btn.type='button'; btn.title='Cambiar de app'; btn.setAttribute('aria-label','Cambiar de app'); btn.style.display='none';
+  btn.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2.2"/><circle cx="12" cy="5" r="2.2"/><circle cx="19" cy="5" r="2.2"/><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/><circle cx="5" cy="19" r="2.2"/><circle cx="12" cy="19" r="2.2"/><circle cx="19" cy="19" r="2.2"/></svg>';
+  h1.style.display='flex'; h1.style.alignItems='center'; h1.style.gap='10px'; h1.appendChild(btn);
+
+  function correoActual(){try{const i=JSON.parse(localStorage.getItem('novaIdentidad')||'null');return i&&i.email||null;}catch(e){return null;}}
+  function mostrar(si){btn.style.display=si?'flex':'none';}
+  async function revisar(){
+    const correo=correoActual();
+    if(!correo){mostrar(false);return;}
+    let c=null; try{c=JSON.parse(localStorage.getItem(CLAVE)||'null');}catch(e){}
+    if(c&&c.email===correo)mostrar(c.admin===true); else mostrar(false);
+    if(!navigator.onLine||typeof getSb!=='function')return;
+    try{
+      const sb=getSb(); if(!sb)return;
+      const s=await sb.auth.getSession(); if(!s.data||!s.data.session)return;
+      const r=await sb.rpc('soy_admin'); if(r.error)return;
+      const admin=r.data===true;
+      try{localStorage.setItem(CLAVE,JSON.stringify({email:correo,admin}));}catch(e){}
+      mostrar(admin);
+    }catch(e){}
+  }
+  btn.onclick=()=>{
+    const d=document.createElement('div'); d.id='novaAppsHoja';
+    d.innerHTML='<div class="caja"><div class="tit">Apps de Nova<button type="button">Cerrar</button></div>'+
+      NOVA_APPS.map(a=>`<a href="${a.actual?'#':esc(a.url)}" class="${a.actual?'actual':''}"><img src="${esc(a.icono)}" alt=""/><span><b>${esc(a.nombre)}</b><small>${a.actual?'Está aquí':esc(a.detalle)}</small></span></a>`).join('')+'</div>';
+    d.onclick=e=>{if(e.target===d||e.target.tagName==='BUTTON'||(e.target.closest('a')&&e.target.closest('a').getAttribute('href')==='#')){e.preventDefault();d.remove();}};
+    document.body.appendChild(d);
+  };
+  revisar();
+  // Al entrar o salir de la cuenta, volver a revisar.
+  try{const sb=getSb(); if(sb)sb.auth.onAuthStateChange(()=>setTimeout(revisar,300));}catch(e){}
+  window.addEventListener('online',revisar);
+})();
+</script>
 </body>
 </html>
