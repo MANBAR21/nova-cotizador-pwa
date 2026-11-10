@@ -124,6 +124,16 @@ input[readonly]{background:#f0fbfd;color:#2E9AB3;font-weight:700}
 .load-btn:hover{background:#333}
 /* export buttons */
 .export-bar{display:flex;gap:8px;padding:10px 14px;border-top:0.5px solid #eee;background:#fafafa}
+.catWrap{position:relative}
+.catSug{position:absolute;left:0;right:0;top:100%;z-index:60;background:#fff;border:0.5px solid #cfd6d9;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto;margin-top:2px}
+.catSug .it{padding:7px 9px;font-size:11.5px;cursor:pointer;border-bottom:0.5px solid #f0f2f3}
+.catSug .it:last-child{border-bottom:0}
+.catSug .it:hover,.catSug .it.act{background:#eef7f9}
+.catSug .it small{color:#888;font-size:10px}
+.catSug .nuevo{color:#2E9AB3;font-weight:700}
+.catChip{display:inline-block;font-size:9px;padding:1px 6px;border-radius:9px;background:#eef2f3;color:#567;margin-left:5px;vertical-align:1px}
+.catInfo{font-size:10px;color:#777;margin-top:3px;min-height:0}
+.catInfo select{font-size:10.5px;padding:2px 4px;margin-left:4px}
 .exp-btn{flex:1;padding:9px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:Arial;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
 .exp-xlsx{background:#1d6f42;color:white}
 .exp-xlsx:hover{background:#155032}
@@ -242,8 +252,13 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 <div class="card">
   <div class="sec-label">Datos del evento</div>
   <div class="g2">
-    <div><label>Cliente</label><input id="cli" placeholder="Nombre del cliente"/></div>
-    <div><label>Lugar / Venue</label><input id="venue" placeholder="Nombre del lugar"/></div>
+    <div class="catWrap"><label>Cliente</label><input id="cli" placeholder="Escribe para buscar o crear" autocomplete="off"/>
+      <div id="cliSug" class="catSug" style="display:none"></div><div id="cliInfo" class="catInfo"></div>
+      <input type="hidden" id="cliId"/><input type="hidden" id="contactoId"/><input type="hidden" id="cliNuevo"/></div>
+    <div class="catWrap"><label>Lugar / Venue</label><input id="venue" placeholder="Escribe para buscar o crear" autocomplete="off"/>
+      <div id="venueSug" class="catSug" style="display:none"></div><div id="venueInfo" class="catInfo"></div>
+      <input type="hidden" id="venueId"/><input type="hidden" id="venueNuevo"/></div>
+    <div><label>Salón</label><input id="salon" list="salonList" placeholder="Opcional" autocomplete="off"/><datalist id="salonList"></datalist></div>
     <div><label>Fecha del evento</label><input type="date" id="fecha"/></div>
     <div>
       <label>Tipo de evento</label>
@@ -479,8 +494,8 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
   </div>
 
   <div class="g2" style="margin-bottom:7px">
-    <div><label>Buscar por cliente</label>
-      <input id="vzBuscar" placeholder="nombre del cliente" oninput="vzRepintar()"/></div>
+    <div><label>Buscar por cliente o lugar</label>
+      <input id="vzBuscar" placeholder="cliente, lugar o salón" oninput="vzRepintar()"/></div>
     <div><label>Creada por</label>
       <select id="vzAutor" onchange="vzRepintar()"><option value="">Cualquiera</option></select></div>
   </div>
@@ -554,6 +569,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
   <div class="export-bar">
     <button class="exp-btn exp-xlsx" onclick="exportExcel()">📊 Excel (.xlsx)</button>
     <button class="exp-btn exp-pdf" onclick="exportPDF()">📄 PDF</button>
+    <button class="exp-btn" style="background:#2E9AB3;color:#fff" onclick="marcarEnviadaDesdeCotizador()" title="Después de mandarla al cliente por WhatsApp o correo">📤 Marcar como enviada</button>
     <button class="exp-btn exp-edit" id="editQuoteBtn" onclick="togEditQuote()">✏️ Editar</button>
   </div>
 </div>
@@ -880,7 +896,8 @@ const PERS=[
 ];
 
 // ROOM STATE
-const GLOBAL_IDS=['cli','venue','fecha','tipo','otroTipo','tel','email','numDias','pctDiaAdicional','colUnit'];
+const GLOBAL_IDS=['cli','venue','fecha','tipo','otroTipo','tel','email','numDias','pctDiaAdicional','colUnit',
+                  'cliId','contactoId','cliNuevo','venueId','venueNuevo','salon'];
 let rooms=[{name:'Salón Principal',data:null}], activeRoom=0;
 
 // ── HELPERS ──────────────────────────────────────────
@@ -1288,47 +1305,96 @@ async function abrirCotizacion(id, sePuedeAbrir){
   }catch(e){ alert('No se pudo abrir: '+(e&&e.message||e)); }
 }
 
+// Agrupa las versiones: cada cotización guardada de nuevo deja la anterior
+// con reemplazada_por = la nueva. Aquí se sigue esa cadena hasta la última
+// (la "principal") y las anteriores quedan debajo de ella, plegadas.
+// No se borra ni se cambia nada en la base: es solo cómo se muestra, y cada
+// versión se sigue pudiendo abrir.
+let _lcAbiertas=new Set();
+function lcAgrupar(filas){
+  const porId=new Map(filas.map(r=>[r.id,r]));
+  const punta=r=>{let x=r,n=0;while(x.reemplazada_por&&porId.has(x.reemplazada_por)&&n<500){x=porId.get(x.reemplazada_por);n++;}return x;};
+  const grupos=new Map();
+  filas.forEach(r=>{const t=punta(r);if(!grupos.has(t.id))grupos.set(t.id,{principal:t,versiones:[]});if(r!==t)grupos.get(t.id).versiones.push(r);});
+  // Versiones de la más nueva a la más vieja (el id crece con cada guardado).
+  grupos.forEach(g=>g.versiones.sort((a,b)=>b.id-a.id));
+  return [...grupos.values()].sort((a,b)=>b.principal.id-a.principal.id);
+}
+
 function lcPintar(){
   const lista=$('lcLista'), est=$('lcEstado');
   if(!lista||!_lcDatos)return;
+  const autor=($('lcAutor')||{}).value;
   let f=vzFiltrar(_lcDatos,{texto:($('lcBuscar')||{}).value,
                             desde:($('lcDesde')||{}).value,
                             hasta:($('lcHasta')||{}).value});
-  const autor=($('lcAutor')||{}).value;
   if(autor)f=f.filter(r=>String(r.creado_por||'')===autor);
+  // El filtro decide qué grupos salen (basta con que coincida una versión),
+  // pero cada grupo se muestra completo.
+  const coinciden=new Set(f.map(r=>r.id));
+  const grupos=lcAgrupar(_lcDatos).filter(g=>coinciden.has(g.principal.id)||g.versiones.some(v=>coinciden.has(v.id)));
 
-  const ocultas=f.filter(r=>r.oculto).length;
+  const nVers=grupos.reduce((a,g)=>a+g.versiones.length,0);
+  const ocultas=grupos.filter(g=>g.principal.oculto).length;
   est.style.color='#888';
-  est.textContent=f.length+' cotización(es)'+(ocultas?' · '+ocultas+' fuera de la vista de eventos':'');
+  est.textContent=grupos.length+' cotización(es)'+(nVers?' · '+nVers+' versión(es) anterior(es) plegadas':'')+
+    (ocultas?' · '+ocultas+' fuera de la vista de eventos':'');
 
-  if(!f.length){lista.innerHTML='<p style="font-size:11.5px;color:#888;margin:0">Nada con esos filtros.</p>';return;}
+  if(!grupos.length){lista.innerHTML='<p style="font-size:11.5px;color:#888;margin:0">Nada con esos filtros.</p>';return;}
 
-  lista.innerHTML=f.map(r=>{
-    const g=r.oculto;
+  const fmtGuardada=d=>d?vzFmtFecha(String(d).slice(0,10)):'fecha desconocida';
+  lista.innerHTML=grupos.map(({principal:r,versiones})=>{
+    const g=r.oculto, abierta=_lcAbiertas.has(r.id), n=versiones.length;
+    const vers=n&&abierta
+      ? '<div style="margin-top:7px;border-top:0.5px dashed #d5dde0;padding-top:6px">'+
+          versiones.map((v,i)=>
+            '<div class="lcItem lcVersion" data-id="'+v.id+'" data-abrir="'+(v.se_puede_abrir?1:0)+'" '+
+              'style="display:flex;justify-content:space-between;gap:8px;padding:6px 8px;margin-top:4px;'+
+              'border-radius:5px;background:#f6f8f9;cursor:pointer;font-size:10.5px;color:#555">'+
+              '<span>Versión '+(n-i)+' de '+(n+1)+' · guardada el '+fmtGuardada(v.fecha)+
+                (v.autor?' · '+vzEsc(v.autor):'')+'</span>'+
+              '<span style="color:#2E9AB3;white-space:nowrap">'+vzFmtMoneda(v.total)+' ↗</span>'+
+            '</div>').join('')+
+        '</div>'
+      : '';
     return '<div class="lcItem" data-id="'+r.id+'" data-oculto="'+(g?1:0)+'" '+
       'data-abrir="'+(r.se_puede_abrir?1:0)+'" '+
       'style="border:0.5px solid '+(g?'#e8e8e8':'#e2e6e8')+';border-radius:6px;padding:9px 11px;'+
       'margin-bottom:6px;cursor:pointer;background:'+(g?'#f5f5f5':'#fff')+'">'+
       '<div style="display:flex;justify-content:space-between;gap:8px">'+
         '<span style="font-weight:700;font-size:12px;color:'+(g?'#999':'#1a1a1a')+'">'+
-          (r.cliente||'Sin cliente')+'</span>'+
+          vzEsc(r.cliente||'Sin cliente')+'</span>'+
         '<span style="font-size:11px;color:'+(g?'#aaa':'#2E9AB3')+'">'+vzFmtMoneda(r.total)+'</span></div>'+
-      '<div style="font-size:10.5px;color:'+(g?'#aaa':'#666')+';margin-top:3px">'+
+      vzLugarHtml(r,g)+
+      '<div style="font-size:10.5px;color:'+(g?'#aaa':'#666')+';margin-top:2px">📅 '+
         vzFmtFecha(r.fecha_evento)+' · '+(VZ_ESTADO[r.estado]||r.estado)+
-        (r.autor?' · '+r.autor:'')+
-        (r.reemplazada_por?' · reemplazada':'')+
+        (r.autor?' · '+vzEsc(r.autor):'')+
       '</div>'+
-      (g?'<div style="text-align:right;margin-top:4px">'+
-          '<a href="#" class="lcDevolver" data-id="'+r.id+'" '+
-          'style="font-size:10px;color:#2E9AB3;text-decoration:none">↩ Devolver a la vista de eventos</a>'+
-        '</div>':'')+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:5px">'+
+        (n?'<a href="#" class="lcVers" data-id="'+r.id+'" style="font-size:10.5px;color:#2B6E7F;text-decoration:none;font-weight:700">'+
+            '🕘 '+n+(n===1?' versión anterior ':' versiones anteriores ')+(abierta?'▴':'▾')+'</a>':'<span></span>')+
+        (g?'<a href="#" class="lcDevolver" data-id="'+r.id+'" '+
+            'style="font-size:10px;color:#2E9AB3;text-decoration:none">↩ Devolver a la vista de eventos</a>':'')+
+      '</div>'+
+      vers+
     '</div>';
   }).join('');
 
   lista.querySelectorAll('.lcItem').forEach(el=>{
     el.onclick=ev=>{
-      if(ev.target.classList.contains('lcDevolver'))return;
+      if(ev.target.closest('.lcDevolver,.lcVers'))return;
+      // Un clic en una versión abre esa versión, no la principal que la contiene.
+      if(!el.classList.contains('lcVersion')&&ev.target.closest('.lcVersion'))return;
+      ev.stopPropagation();
       abrirCotizacion(+el.dataset.id, el.dataset.abrir==='1');
+    };
+  });
+  lista.querySelectorAll('.lcVers').forEach(a=>{
+    a.onclick=ev=>{
+      ev.preventDefault(); ev.stopPropagation();
+      const id=+a.dataset.id;
+      if(_lcAbiertas.has(id))_lcAbiertas.delete(id); else _lcAbiertas.add(id);
+      lcPintar();
     };
   });
   lista.querySelectorAll('.lcDevolver').forEach(a=>{
@@ -1360,7 +1426,7 @@ async function loadQuote(){
       '<button type="button" id="lcX" style="background:none;border:0;font-size:20px;cursor:pointer;color:#999">×</button>'+
     '</div>'+
     '<div class="g2" style="margin-bottom:7px">'+
-      '<div><label>Buscar por cliente</label><input id="lcBuscar" placeholder="nombre"/></div>'+
+      '<div><label>Buscar por cliente o lugar</label><input id="lcBuscar" placeholder="cliente, lugar o salón"/></div>'+
       '<div><label>Creada por</label><select id="lcAutor"><option value="">Cualquiera</option></select></div>'+
     '</div>'+
     '<div class="g2" style="margin-bottom:9px">'+
@@ -1434,10 +1500,12 @@ function onLoadFile(e){
       activeRoom=Math.min(state.activeRoom||0,rooms.length-1);
       // Restore global fields first
       if($('colUnit'))$('colUnit').value='0';
+      catLimpiarCampos();
       if(state.global)Object.entries(state.global).forEach(([id,v])=>{let el=$(id);if(el)el.value=v;});
       roomRestore(rooms[activeRoom].data);
       renderRoomTabs();
       onNumDiasChange();
+      catPintarInfo();
       // Restore saved quote (with manual edits) if present
       if(state.savedQuote&&state.savedQuote.qBody){
         if($('qBody'))$('qBody').innerHTML=state.savedQuote.qBody;
@@ -1558,9 +1626,17 @@ function buildRowsFromData(d,globalNumDias){
   if(SRV.Transp){let tropc=sOpc('Transp');let val=parseInt(v('transpPrecio'))||0;if(val){if(tropc)rows.push({t:'row',desc:'Transporte / logística',qty:1,unit:val,sub:val,noDay:true,opcional:true});else transpTotal=val;}}
   let addlRows=[],addlTotal=0,cortRows=[];(d.extras||[]).forEach(it=>{if(it.cort){if(it.n)cortRows.push({t:'cortesia',desc:it.n});return;}let q=parseInt(it.q)||0,p=parseInt(it.p)||0,md=numDiasGlobal>1,du=parseInt(it.dias)||0,xd=md?1:(du||1);if(it.n&&q&&p){let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;let ex={};if(md){let zmax=zoneDays?Math.max(0,zoneDays.length-1):numDiasGlobal-1;if(du){let dd=Math.min(du,zmax+1);ex.extraDays=Math.max(0,dd-1);if(dd<numDiasGlobal)nd+=' ('+dd+' día'+(dd>1?'s':'')+')';}let dp=parseFloat(it.dpct);if(it.dpct!==''&&it.dpct!=null&&!isNaN(dp))ex.pct=Math.max(0,Math.min(100,dp));}let rw=Object.assign({t:'catitem',desc:nd,qty:q,unit:p,sub:s,noDay:md?undefined:true},ex);if(it.opt){rw.desc='(Opcional) '+nd;rw.opcional=true;addlRows.push(rw);}else{addlTotal+=s;addlRows.push(rw);}}});
   let persRows=[],persTotal=0;
-  PERS.forEach(p=>{if(!on('pRol_'+p.id))return;let q=parseInt(v('pQ_'+p.id))||0,r=parseInt(v('pR_'+p.id))||p.r;if(q>0){persRows.push({n:p.n,q,r,t:q*r});persTotal+=q*r;}});
+  // El personal técnico se paga por día: en eventos de varios días el costo se multiplica por los días.
+  const persDias=numDiasGlobal>1?numDiasGlobal:1;
+  PERS.forEach(p=>{if(!on('pRol_'+p.id))return;let q=parseInt(v('pQ_'+p.id))||0,r=parseInt(v('pR_'+p.id))||p.r;if(q>0){persRows.push({n:p.n+(persDias>1?' (×'+persDias+' días)':''),q,r,t:q*r*persDias});persTotal+=q*r*persDias;}});
   if(persRows.length){
-    if(piApart){total+=persTotal;rows.push({t:'cat',desc:'Personal técnico',sub:persTotal,noDay:true});persRows.forEach(p=>rows.push({t:'row',desc:p.n,qty:p.q,unit:p.r,sub:p.t,noDay:true}));}
+    // El personal se cobra por turno: en un evento de varios días cada día es
+    // un turno completo (100%), no el "% día adicional" de los equipos. Antes
+    // las filas iban con noDay y un evento de 3 días cobraba un solo turno
+    // (ticket #3). Los días adicionales los suman las filas de cada persona,
+    // con el mismo motor de días que el resto (respeta los días del salón);
+    // la fila de categoría sigue con noDay para que no cuenten doble.
+    if(piApart){total+=persTotal;rows.push({t:'cat',desc:'Personal técnico',sub:persTotal,noDay:true});persRows.forEach(p=>rows.push(numDiasGlobal>1?{t:'row',desc:p.n,qty:p.q,unit:p.r,sub:p.t,pct:100}:{t:'row',desc:p.n,qty:p.q,unit:p.r,sub:p.t,noDay:true}));}
     else{rows.push({t:'cat',desc:'Personal técnico asignado'});persRows.forEach(p=>rows.push({t:'subq',desc:p.n,qty:p.q}));}
   }
   if(addlRows.length){addlRows.forEach(r=>rows.push(r));}
@@ -2009,7 +2085,7 @@ function gen(){
   let fecha=$('fecha').value;
   let fmtD=d=>{if(!d)return'—';let[y,m,dy]=d.split('-');return parseInt(dy)+' de '+['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][parseInt(m)-1]+' de '+y;};
   let hoy=new Date().toISOString().split('T')[0];
-  $('qInfo').innerHTML=`<span class="ql">Fecha emisión:</span><span>${fmtD(hoy)}</span><span class="ql">Fecha evento:</span><b>${fmtD(fecha)||'—'}</b><span class="ql">Cliente:</span><span>${$('cli').value||'—'}</span><span class="ql">Lugar:</span><span>${$('venue').value||'—'}</span><span class="ql">Teléfono:</span><span>${$('tel').value||'—'}</span><span class="ql">E-mail:</span><span>${$('email').value||'—'}</span>`;
+  $('qInfo').innerHTML=`<span class="ql">Fecha emisión:</span><span>${fmtD(hoy)}</span><span class="ql">Fecha evento:</span><b>${fmtD(fecha)||'—'}</b><span class="ql">Cliente:</span><span>${$('cli').value||'—'}</span><span class="ql">Lugar:</span><span>${lugarTexto()||'—'}</span><span class="ql">Teléfono:</span><span>${$('tel').value||'—'}</span><span class="ql">E-mail:</span><span>${$('email').value||'—'}</span>`;
 
   let{numDias,pctDia,showDias}=getDayInfo();
   let nCols=showDias?5:4;
@@ -2446,7 +2522,7 @@ function _doExcel(){
 
   // ── INFO CLIENTE ──
   set(padTo([c('Fecha emisión:',infoLbl),c(fmtD(hoy),infoVal),c('Cliente:',infoLbl),c($('cli').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
-  set(padTo([c('Fecha evento:',infoLbl),c(fmtD(fecha)||'—',{...infoVal,font:{bold:true,color:{rgb:DARK},name:'Arial',sz:10}}),c('Lugar:',infoLbl),c($('venue').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
+  set(padTo([c('Fecha evento:',infoLbl),c(fmtD(fecha)||'—',{...infoVal,font:{bold:true,color:{rgb:DARK},name:'Arial',sz:10}}),c('Lugar:',infoLbl),c(lugarTexto()||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
   set(padTo([c('Tipo de evento:',infoLbl),c(getTipoLabel(),infoVal),c('Teléfono:',infoLbl),c($('tel').value||'—',infoVal)]));if(showDias)mrg(R-1,3,R-1,LC);
   set(padTo([c('E-mail:',infoLbl),c($('email').value||'—',infoVal),empty(infoVal),empty(infoVal)]));mrg(R-1,1,R-1,showDias?LC:3);
   if(showDias){set(padTo([c('Días del evento:',infoLbl),c(numDias,infoVal),c('% cobro día adicional:',infoLbl),c(fmtN(pctDia)+'%',infoVal)]));}
@@ -2573,7 +2649,7 @@ function exportCSV(){
   const pad=showDias?',':'';
   let lines=['NOVA PRODUCCIONES,,,'+pad,,'"Creamos luz para innovar" · Fernando Manzur · 3007070678,,,'+pad,'gerencia@novaproductions.co,,,'+pad,',,,'+pad
     ,'Fecha emisión:,'+esc(fmtD(hoy))+',Cliente:,'+esc($('cli').value)+pad
-    ,'Fecha evento:,'+esc(fmtD(fecha)||'—')+',Lugar:,'+esc($('venue').value)+pad
+    ,'Fecha evento:,'+esc(fmtD(fecha)||'—')+',Lugar:,'+esc(lugarTexto())+pad
     ,'Teléfono:,'+esc($('tel').value)+',E-mail:,'+esc($('email').value)+pad
     ,(showDias?'Días del evento:,'+numDias+',% cobro día adicional:,'+fmtN(pctDia)+'%':',,,'+pad)
     ,',,,'+pad
@@ -2746,7 +2822,10 @@ function mostrarPonerClave(){
       history.replaceState(null,'',location.pathname+location.search); // borra el token de la barra
       d.remove();
       pintarBarraSesion();
-      flushPendingQueue();
+      // Al entrar se suben las dos colas: cotizaciones y tickets.
+      sincronizarColas();
+      try{cargarVisualizador();}catch(e2){}
+      try{cargarTickets();}catch(e2){}
     }catch(e){
       btn.disabled=false;btn.textContent='Guardar y entrar';
       msg.textContent='No se pudo guardar: '+(e&&e.message||e);
@@ -2762,14 +2841,193 @@ function mostrarPonerClave(){
 // decide nada de seguridad: lo que llega es lo que la persona puede ver.
 const VZ_CACHE='novaVisualizadorCache';
 
+// Lugar y salón (migración 019): con varios eventos del mismo cliente es lo
+// que permite distinguirlos de un vistazo.
+function vzEsc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function vzLugarHtml(r,gris){
+  const l=[r.lugar,r.salon].filter(x=>x&&String(x).trim()).map(vzEsc).join(' · ');
+  return '<div style="font-size:11px;color:'+(gris?'#aaa':'#333')+';margin-top:3px">📍 '+(l||'<span style="color:#aaa">Sin lugar</span>')+'</div>';
+}
 function vzFmtMoneda(n){return n==null?'—':'$'+Number(n).toLocaleString('es-CO');}
 function vzFmtFecha(f){
   if(!f)return 'Sin fecha';
   const[y,m,d]=f.split('-');
   return parseInt(d)+' '+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][parseInt(m)-1]+' '+y;
 }
-const VZ_ESTADO={negociacion:'🟡 Negociación',confirmada:'🟢 Confirmada',
-                 llamado_equipos:'🔵 Llamado de equipos',cancelado:'🔴 Cancelado'};
+// Nombres de los estados. La fuente es la tabla cotizacion_estados (migración
+// 015); esta lista es el respaldo para cuando la app abre sin señal y sin
+// catálogo guardado. Los CÓDIGOS son internos y no cambian: 'negociacion' se
+// muestra como "Cotización enviada" y 'llamado_equipos' como "Planeación
+// operativa". Renombrar códigos rompería colas offline y apps ya instaladas.
+const VZ_ESTADOS_BASE=[
+  {codigo:'borrador',         nombre:'Sin enviar',           icono:'📝',orden:5, confirmado:false,es_salida:false},
+  {codigo:'negociacion',      nombre:'Cotización enviada',   icono:'🟡',orden:10,confirmado:false,es_salida:false},
+  {codigo:'confirmada',       nombre:'Evento confirmado',    icono:'🟢',orden:20,confirmado:true, es_salida:false},
+  {codigo:'llamado_equipos',  nombre:'Planeación operativa', icono:'🔵',orden:30,confirmado:true, es_salida:false},
+  {codigo:'finalizado',       nombre:'Evento finalizado',    icono:'⚪',orden:40,confirmado:true, es_salida:false},
+  {codigo:'cierre_financiero',nombre:'Cierre financiero',    icono:'💰',orden:50,confirmado:true, es_salida:false},
+  {codigo:'no_aprobada',      nombre:'No aprobada',          icono:'⚫',orden:90,confirmado:false,es_salida:true},
+  {codigo:'cancelado',        nombre:'Cancelado',            icono:'🔴',orden:95,confirmado:false,es_salida:true}
+];
+const VZ_ESTADOS_CACHE='novaEstadosCatalogo';
+let VZ_ESTADOS=VZ_ESTADOS_BASE.slice();
+const VZ_ESTADO={};   // codigo -> "icono Nombre", lo usan las listas
+function vzAplicarCatalogo(lista){
+  const iconos={};VZ_ESTADOS_BASE.forEach(e=>{iconos[e.codigo]=e.icono;});
+  VZ_ESTADOS=lista.filter(e=>e.activo!==false)
+    .map(e=>Object.assign({icono:iconos[e.codigo]||'•'},e))
+    .sort((a,b)=>a.orden-b.orden);
+  Object.keys(VZ_ESTADO).forEach(k=>{delete VZ_ESTADO[k];});
+  VZ_ESTADOS.forEach(e=>{VZ_ESTADO[e.codigo]=e.icono+' '+e.nombre;});
+}
+vzAplicarCatalogo((()=>{try{return JSON.parse(localStorage.getItem(VZ_ESTADOS_CACHE)||'null');}catch(e){return null;}})()||VZ_ESTADOS_BASE);
+async function vzCargarCatalogo(){
+  try{
+    const{data,error}=await getSb().from('cotizacion_estados')
+      .select('codigo,nombre,orden,confirmado,es_salida,activo');
+    if(error||!data||!data.length)return;
+    try{localStorage.setItem(VZ_ESTADOS_CACHE,JSON.stringify(data));}catch(e){}
+    vzAplicarCatalogo(data);
+  }catch(e){}
+}
+function vzInfoEstado(c){return VZ_ESTADOS.find(e=>e.codigo===c)||null;}
+
+// ── CAMBIO DE ESTADO (migración 015) ─────────────────────────────────────
+// Quién puede lo decide la base (columna puede_cambiar_estado de la vista):
+// hoy solo Fernando y Camilo. Cada cambio dice de qué estado parte; si en el
+// servidor ya es otro, no se pisa y se avisa. Sin señal entra a una cola
+// propia (no la de cotizaciones) y se sube al reconectar.
+const NOVA_ESTADO_QUEUE='novaEstadoQueue';
+function getEstadoQueue(){try{return JSON.parse(localStorage.getItem(NOVA_ESTADO_QUEUE)||'[]');}catch(e){return[];}}
+function setEstadoQueue(q){try{localStorage.setItem(NOVA_ESTADO_QUEUE,JSON.stringify(q));}catch(e){}}
+function vzEsErrorDeRed(m){return /fetch|network|load failed|timeout/i.test((m||'')+'');}
+
+function vzSelectorEstado(r){
+  const pend=getEstadoQueue().some(x=>x.id===r.id);
+  const conocido=!!vzInfoEstado(r.estado);
+  return '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">'+
+    '<span style="font-size:10px;color:#888">Estado</span>'+
+    '<select class="vzEstadoSel" data-id="'+r.id+'" data-de="'+r.estado+'" '+
+      'data-cliente="'+(r.cliente||'').replace(/"/g,'&quot;')+'" '+
+      'style="font-size:11px;padding:3px 6px;border:0.5px solid #ccc;border-radius:4px;'+
+      'background:#fff;flex:1;min-width:0;max-width:240px">'+
+      VZ_ESTADOS.map(e=>'<option value="'+e.codigo+'"'+(e.codigo===r.estado?' selected':'')+'>'+
+        e.icono+' '+e.nombre+'</option>').join('')+
+      (conocido?'':'<option value="'+r.estado+'" selected>'+r.estado+'</option>')+
+    '</select>'+
+    (pend?'<span style="font-size:9.5px;color:#c98a00">⏳ sin subir</span>':'')+
+    (r.estado==='borrador'
+      ?'<button type="button" class="vzEnviada" data-id="'+r.id+'" '+
+        'style="font-size:10.5px;padding:4px 9px;border:0;border-radius:4px;background:#2E9AB3;'+
+        'color:#fff;font-weight:700;cursor:pointer">📤 Marcar como enviada</button>'
+      :'')+
+  '</div>';
+}
+
+async function vzOnCambioEstado(sel){
+  const id=+sel.dataset.id, de=sel.dataset.de, a=sel.value;
+  const cli=sel.dataset.cliente||'esta cotización';
+  if(a===de)return;
+  const ea=vzInfoEstado(a), nomA=ea?ea.nombre:a, nomDe=(vzInfoEstado(de)||{}).nombre||de;
+  let motivo=null;
+  if(ea&&ea.es_salida){
+    motivo=prompt('"'+cli+'" pasa a '+nomA+'.\n\nMotivo (opcional, puedes dejarlo vacío):','');
+    if(motivo===null){sel.value=de;return;}
+  }else if(!confirm('¿Pasar "'+cli+'" de '+nomDe+' a '+nomA+'?')){sel.value=de;return;}
+  sel.disabled=true;
+  await cambiarEstado(id,de,a,motivo);
+}
+
+// Refleja el cambio en pantalla y en el cache, para que sin señal se vea lo
+// que se hizo (marcado "sin subir") y los filtros lo respeten.
+function vzAplicarLocal(id,a){
+  const info=vzInfoEstado(a);
+  const tocar=f=>{if(f&&f.id===id){f.estado=a;if(info)f.confirmado=!!info.confirmado;}};
+  (_vzUltimas||[]).forEach(tocar);
+  try{
+    const c=JSON.parse(localStorage.getItem(VZ_CACHE)||'null');
+    if(c){Object.values(c).forEach(v=>(v&&v.filas||[]).forEach(tocar));
+          localStorage.setItem(VZ_CACHE,JSON.stringify(c));}
+  }catch(e){}
+}
+
+async function cambiarEstado(id,de,a,motivo){
+  const encolar=()=>{
+    const q=getEstadoQueue(); q.push({id,de,a,motivo:motivo||null,en:new Date().toISOString()});
+    setEstadoQueue(q);
+    vzAplicarLocal(id,a); vzRepintar();
+    const est=$('vzEstado');
+    if(est){est.style.color='#c98a00';est.textContent='Sin conexión o sin sesión — el cambio de estado se sube solo al reconectar o al entrar';}
+  };
+  // Devuelve 'ok' | 'encolado' | 'conflicto' | 'error'.
+  if(!navigator.onLine||!(await refrescarSesion())){encolar();return 'encolado';}
+  let r='ok';
+  try{
+    const{data,error}=await getSb().rpc('cambiar_estado_cotizacion',
+      {p_id:id,p_de:de,p_a:a,p_motivo:motivo||null});
+    if(error)throw error;
+    if(data&&data.conflicto){
+      r='conflicto';
+      alert('No se cambió: esta cotización ya está en "'+
+        ((vzInfoEstado(data.estado_actual)||{}).nombre||data.estado_actual)+'".');
+    }
+  }catch(e){
+    const m=e&&e.message||String(e);
+    if(vzEsErrorDeRed(m)){encolar();return 'encolado';}
+    r='error';
+    alert('No se pudo cambiar el estado: '+m);
+  }
+  if($('t2')&&$('t2').style.display!=='none')await cargarVisualizador(true);
+  return r;
+}
+
+// "📤 Marcar como enviada": de Sin enviar a Cotización enviada en un toque.
+// Se usa desde la tarjeta del visualizador y desde el cotizador, después de
+// mandar el PDF por WhatsApp o correo.
+async function marcarEnviada(id,origen){
+  const r=await cambiarEstado(id,'borrador','negociacion',null);
+  const msg={ok:'📤 Marcada como enviada',encolado:'📤 Marcada como enviada — se sube al reconectar'}[r];
+  if(msg&&origen==='cotizador')setSyncStatus(msg,r==='ok'?'#2E9AB3':'#c98a00');
+  if(r==='encolado'||r==='ok'){vzAplicarLocal(id,'negociacion');vzRepintar();}
+  return r;
+}
+
+async function marcarEnviadaDesdeCotizador(){
+  if(!identidadCacheada()){alert('Entra con tu cuenta para marcar cotizaciones como enviadas.');return;}
+  if(!currentCotizacionId){
+    const pendiente=getPendingQueue().some(x=>x.payload&&x.payload.client_uuid===currentClientUuid);
+    alert(pendiente
+      ? 'Esta cotización todavía no ha subido al sistema (sin señal). Cuando sincronice, márcala como enviada desde "Eventos cotizados".'
+      : 'Primero genera el PDF o guarda la cotización: así queda en el sistema y se puede marcar como enviada.');
+    return;
+  }
+  await marcarEnviada(currentCotizacionId,'cotizador');
+}
+
+async function flushEstadoQueue(sinRecargar){
+  const q=getEstadoQueue();
+  if(!q.length||!navigator.onLine)return;
+  if(!(await refrescarSesion()))return;
+  const quedan=[], avisos=[];
+  for(const x of q){
+    try{
+      const{data,error}=await getSb().rpc('cambiar_estado_cotizacion',
+        {p_id:x.id,p_de:x.de,p_a:x.a,p_motivo:x.motivo||null});
+      if(error){
+        if(vzEsErrorDeRed(error.message))quedan.push(x);
+        else avisos.push('Cotización '+x.id+': '+error.message);
+      }else if(data&&data.conflicto){
+        avisos.push('Cotización '+x.id+': no pasó a '+((vzInfoEstado(x.a)||{}).nombre||x.a)+
+          ' porque ya estaba en '+((vzInfoEstado(data.estado_actual)||{}).nombre||data.estado_actual)+'.');
+      }
+    }catch(e){quedan.push(x);}
+  }
+  setEstadoQueue(quedan);
+  if(avisos.length)alert('Cambios de estado hechos sin señal que NO se aplicaron:\n\n'+avisos.join('\n'));
+  if(!sinRecargar&&quedan.length<q.length&&$('t2')&&$('t2').style.display!=='none')cargarVisualizador(true);
+}
+window.addEventListener('online',()=>flushEstadoQueue());
+window.addEventListener('load',()=>{setTimeout(()=>flushEstadoQueue(),2000);});
 
 // Filtro compartido por el visualizador y por "Cargar cotización", para que la
 // regla de busqueda viva en un solo sitio y no se desincronicen.
@@ -2779,7 +3037,7 @@ function vzFiltrar(filas,{texto,desde,hasta}={}){
     // Sin acentos y sin mayusculas: buscar "cortes" debe encontrar "Cortés".
     const norm=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
     const q=norm(texto.trim());
-    f=f.filter(r=>norm(r.cliente).includes(q));
+    f=f.filter(r=>norm(r.cliente).includes(q)||norm(r.lugar).includes(q)||norm(r.salon).includes(q));
   }
   // Las sin fecha se conservan solo cuando no hay filtro de fechas: si el
   // usuario acota un rango, esta preguntando por fechas y las que no tienen
@@ -2796,6 +3054,9 @@ function vzPintar(filas,desdeCache,fechaCache){
   let f=vzFiltrar(filas,{texto:($('vzBuscar')||{}).value,
                          desde:($('vzDesde')||{}).value,
                          hasta:($('vzHasta')||{}).value});
+  // Una versión anterior es el mismo evento que su versión nueva: aquí solo
+  // cuenta la última (las anteriores se ven en "Cargar cotización").
+  f=f.filter(r=>!r.reemplazada_por);
   const autor=($('vzAutor')||{}).value;
   if(autor)f=f.filter(r=>String(r.creado_por||'')===autor);
   if(filtro==='confirmados')f=f.filter(r=>r.confirmado);
@@ -2845,9 +3106,12 @@ function vzPintar(filas,desdeCache,fechaCache){
         '<span style="font-weight:700;font-size:12px">'+(r.cliente||'Sin cliente')+'</span>'+
         '<span style="font-size:11px;color:#2E9AB3;font-weight:700">'+vzFmtMoneda(r.total)+'</span>'+
       '</div>'+
-      '<div style="font-size:10.5px;color:#666;margin-top:3px">'+
-        vzFmtFecha(r.fecha_evento)+(cuando?' · '+cuando:'')+' · '+(VZ_ESTADO[r.estado]||r.estado)+
+      vzLugarHtml(r)+
+      '<div style="font-size:10.5px;color:#666;margin-top:2px">📅 '+
+        vzFmtFecha(r.fecha_evento)+(cuando?' · '+cuando:'')+
+        (r.puede_cambiar_estado?'':' · '+(VZ_ESTADO[r.estado]||r.estado))+
       '</div>'+
+      (r.puede_cambiar_estado?vzSelectorEstado(r):'')+
       (r.incluye_precios===false?'<div style="font-size:9.5px;color:#aaa;margin-top:2px">Sin permiso para ver montos</div>':'')+
       '<div style="text-align:right;margin-top:5px">'+
         '<a href="#" class="vzQuitar" data-id="'+r.id+'" '+
@@ -2856,6 +3120,10 @@ function vzPintar(filas,desdeCache,fechaCache){
       '</div>'+
     '</div>';
   }).join('');
+
+  cont.querySelectorAll('.vzEstadoSel').forEach(s=>{s.onchange=()=>vzOnCambioEstado(s);});
+  cont.querySelectorAll('.vzEnviada').forEach(b=>{b.onclick=async()=>{
+    b.disabled=true;b.textContent='...';await marcarEnviada(+b.dataset.id,'visualizador');}});
 
   cont.querySelectorAll('.vzQuitar').forEach(a=>{
     a.onclick=async ev=>{
@@ -2904,9 +3172,23 @@ async function cargarVisualizador(forzar){
     return;
   }
 
+  // Hay red pero no hay token: sin sesión la consulta vuelve vacía y la lista
+  // parece "no mostrar nada". Se avisa claro y se deja entrar.
+  if(!(await refrescarSesion())){
+    if(cache&&cache[vista])vzPintar(cache[vista].filas,true,cache[vista].en);
+    est.style.color='#c98a00';
+    est.innerHTML=(cache&&cache[vista]?'Mostrando lo último que se vio — ':'')+'tu sesión venció. '+
+      '<a href="#" onclick="mostrarLogin();return false" style="color:#2E9AB3;font-weight:700;text-decoration:none">Entrar de nuevo</a>';
+    if(!(cache&&cache[vista]))cont.innerHTML='';
+    return;
+  }
+
   est.textContent='Cargando...';
   try{
     const sb=getSb();
+    // Primero lo que se cambió sin señal, para que la lista ya lo traiga.
+    await flushEstadoQueue(true);
+    await vzCargarCatalogo();
     const{data,error}=await sb.from(vista).select('*');
     if(error)throw error;
     const guardar=cache||{};
@@ -2957,7 +3239,10 @@ function mostrarLogin(){
       await ingresar(em.value,pa.value);
       d.remove();
       pintarBarraSesion();
-      flushPendingQueue();
+      // Al entrar se suben las dos colas: cotizaciones y tickets.
+      sincronizarColas();
+      try{cargarVisualizador();}catch(e2){}
+      try{cargarTickets();}catch(e2){}
     }catch(e){
       btn.disabled=false;btn.textContent='Entrar';
       const m=(e&&e.message||'').toLowerCase();
@@ -3127,6 +3412,15 @@ function buildSupabasePayload(){
     cotizacion_id:currentCotizacionId||undefined,
     estado_app:estadoApp,
     cliente:$('cli').value.trim()||'Cliente',
+    // Catálogos (migración 018). Todo opcional: sin ids el servidor liga por
+    // nombre exacto; los nuevos viajan aquí para crearse en el mismo guardado,
+    // también si el guardado sale de la cola offline.
+    cliente_id:($('cliId')||{}).value||null,
+    contacto_id:($('contactoId')||{}).value||null,
+    cliente_nuevo:catJSON(($('cliNuevo')||{}).value),
+    venue_id:($('venueId')||{}).value||null,
+    venue_nuevo:catJSON(($('venueNuevo')||{}).value),
+    salon:(($('salon')||{}).value||'').trim()||null,
     fecha_evento:$('fecha').value||null,
     subtotal:sub_,                    // ya con descuento, antes de IVA
     iva:iva,
@@ -3180,6 +3474,7 @@ async function guardarEnSistema(){
     let res=await enviarPayload(payload);
     // Solo el guardado de ESTA cotización actualiza su id (el flush de la cola no).
     if(res&&res.cotizacion_id&&payload.client_uuid===currentClientUuid)currentCotizacionId=res.cotizacion_id;
+    catAplicarRespuesta(payload,res);
     setSyncStatus('☁️ Guardado en el sistema — '+new Date().toLocaleTimeString(),'#2E9AB3');
     await flushPendingQueue();
   }catch(err){
@@ -3224,6 +3519,7 @@ async function flushPendingQueue(){
       if(res&&res.cotizacion_id&&entry.payload&&entry.payload.client_uuid===currentClientUuid){
         currentCotizacionId=res.cotizacion_id;
       }
+      catAplicarRespuesta(entry.payload,res);
     }catch(e){remaining.push(entry);}
   }
   setPendingQueue(remaining);
@@ -3249,6 +3545,282 @@ window.addEventListener('load',async()=>{
   // Siempre se pinta la barra; nunca se abre el login solo.
   pintarBarraSesion();
 });
+
+
+// ── CLIENTES Y VENUES: AUTOCOMPLETAR (migraciones 017 y 018) ─────────────
+// El catálogo se baja una vez y queda en el dispositivo, así que buscar
+// funciona sin señal. Lo nuevo (cliente o venue) no se crea aquí: viaja con
+// la cotización y el servidor lo crea al guardarla, también desde la cola
+// offline. Así no hay una segunda cola que ordenar.
+// Reglas: elegir de la lista llena el contacto (correo y teléfono); escribir
+// encima borra la elección; un nombre que coincide EXACTO con uno conocido
+// (o como se escribía antes) se liga solo; nunca se liga por parecido.
+const CAT_CACHE='novaCatalogos';
+const CAT_TIPOS={agencia:'Agencia',planner:'Planner',cliente_final:'Cliente final',empresa:'Empresa'};
+let CAT={clientes:[],contactos:[],calias:[],venues:[],salones:[],valias:[],locales:[],en:null};
+try{const c=JSON.parse(localStorage.getItem(CAT_CACHE)||'null');if(c&&c.clientes)CAT=Object.assign(CAT,c);}catch(e){}
+function catGuardarCache(){try{localStorage.setItem(CAT_CACHE,JSON.stringify(CAT));}catch(e){}}
+function catNorm(s){return(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .toLowerCase().replace(/[^a-z0-9ñ&@. ]+/g,' ').replace(/\s+/g,' ').trim();}
+function catJSON(v){if(!v)return null;try{return JSON.parse(v);}catch(e){return null;}}
+function catEsc(s){return(s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function lugarTexto(){
+  const v=(($('venue')||{}).value||'').trim(), sl=(($('salon')||{}).value||'').trim();
+  return sl?(v?v+' – '+sl:sl):v;
+}
+function catLimpiarCampos(){
+  ['cliId','contactoId','cliNuevo','venueId','venueNuevo','salon'].forEach(id=>{const el=$(id);if(el)el.value='';});
+}
+
+async function catCargar(){
+  if(!navigator.onLine||!identidadCacheada())return;
+  const sb=getSb(); if(!sb)return;
+  try{
+    const ts=['clientes','cliente_contactos','cliente_alias','venues','venue_salones','venue_alias'];
+    const r=await Promise.all(ts.map(t=>sb.from(t).select('*')));
+    if(r.some(x=>x.error||!x.data))return;
+    const ya=new Set(r[0].data.map(c=>catNorm(c.nombre)));
+    CAT={clientes:r[0].data,contactos:r[1].data,calias:r[2].data,venues:r[3].data,salones:r[4].data,valias:r[5].data,
+         // lo creado en este dispositivo que todavía no subió
+         locales:(CAT.locales||[]).filter(x=>!ya.has(catNorm(x.nombre))),
+         en:new Date().toISOString()};
+    catGuardarCache(); catPintarInfo();
+  }catch(e){}
+}
+window.addEventListener('load',()=>{setTimeout(catCargar,1200);});
+window.addEventListener('online',()=>catCargar());
+
+// ── búsqueda ──
+function catClientePorId(id){return CAT.clientes.find(c=>String(c.id)===String(id))||null;}
+function catVenuePorId(id){return CAT.venues.find(v=>String(v.id)===String(id))||null;}
+function catContactos(cid){return CAT.contactos.filter(k=>String(k.cliente_id)===String(cid))
+  .sort((a,b)=>(b.principal?1:0)-(a.principal?1:0));}
+function catExactoCliente(txt){
+  const n=catNorm(txt); if(!n)return null;
+  const c=CAT.clientes.find(x=>catNorm(x.nombre)===n); if(c)return c;
+  const a=CAT.calias.find(x=>catNorm(x.alias)===n); return a?catClientePorId(a.cliente_id):null;
+}
+function catExactoVenue(txt){
+  const n=catNorm(txt); if(!n)return null;
+  const v=CAT.venues.find(x=>catNorm(x.nombre)===n); if(v)return v;
+  const a=CAT.valias.find(x=>catNorm(x.alias)===n); return a?catVenuePorId(a.venue_id):null;
+}
+function catBuscar(lista,alias,campoId,txt){
+  const q=catNorm(txt); if(!q)return lista.filter(x=>x.activo!==false).slice(0,8);
+  const hits=new Map();
+  lista.forEach(x=>{if(x.activo===false)return;const n=catNorm(x.nombre);
+    if(n.includes(q))hits.set(x.id,n.startsWith(q)?0:1);});
+  alias.forEach(a=>{const n=catNorm(a.alias);if(n.includes(q)&&!hits.has(a[campoId]))hits.set(a[campoId],2);});
+  return [...hits].sort((a,b)=>a[1]-b[1]).map(([id])=>lista.find(x=>x.id===id)).filter(Boolean).slice(0,8);
+}
+function catLev(a,b){
+  if(Math.abs(a.length-b.length)>3)return 9;
+  const d=Array.from({length:a.length+1},(_,i)=>[i]);
+  for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)
+    d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length];
+}
+// Parecidos para avisar antes de crear: contiene, comparte una palabra
+// larga, o difiere en 1-2 letras ("Cartgena" / "Cartagena").
+function catParecidos(lista,txt){
+  const n=catNorm(txt); if(n.length<3)return[];
+  const pal=n.split(' ').filter(w=>w.length>=4&&!['hotel','centro','colegio','grupo','eventos'].includes(w));
+  return lista.filter(x=>{const m=catNorm(x.nombre);
+    return m.includes(n)||n.includes(m)||catLev(m,n)<=2||pal.some(w=>m.split(' ').includes(w));}).slice(0,5);
+}
+
+// ── lista desplegable ──
+function catMostrar(cajaId,items){
+  const caja=$(cajaId); if(!caja)return;
+  if(!items.length){caja.style.display='none';caja.innerHTML='';return;}
+  caja.innerHTML=items.map((it,i)=>'<div class="it'+(it.nuevo?' nuevo':'')+'" data-i="'+i+'">'+it.html+'</div>').join('');
+  caja.style.display='block';
+  caja.querySelectorAll('.it').forEach(el=>{
+    // pointerdown y no click: el click llega después del blur del input y
+    // para entonces la lista ya se cerró.
+    el.addEventListener('pointerdown',ev=>{ev.preventDefault();caja.style.display='none';items[+el.dataset.i].go();});
+  });
+}
+function catSugerirCliente(){
+  const txt=$('cli').value, n=catNorm(txt);
+  const hits=catBuscar(CAT.clientes,CAT.calias,'cliente_id',txt);
+  const items=hits.map(c=>{const k=catContactos(c.id)[0];
+    return{html:'<b>'+catEsc(c.nombre)+'</b><span class="catChip">'+(CAT_TIPOS[c.tipo]||c.tipo)+'</span>'+
+      (k?'<br><small>'+catEsc([k.nombre,k.correo,k.telefono].filter(Boolean).join(' · '))+'</small>':''),
+      go:()=>catElegirCliente(c)};});
+  (CAT.locales||[]).filter(x=>x.clase==='cliente'&&catNorm(x.nombre).includes(n)).forEach(x=>{
+    items.push({html:'<b>'+catEsc(x.nombre)+'</b><span class="catChip">nuevo, sin subir</span>',go:()=>catUsarClienteNuevo(x)});});
+  if(n&&!catExactoCliente(txt)&&!(CAT.locales||[]).some(x=>x.clase==='cliente'&&catNorm(x.nombre)===n))
+    items.push({nuevo:true,html:'+ Crear cliente «'+catEsc(txt.trim())+'»',go:()=>catModalCliente(txt.trim())});
+  catMostrar('cliSug',items);
+}
+function catSugerirVenue(){
+  const txt=$('venue').value, n=catNorm(txt);
+  const items=catBuscar(CAT.venues,CAT.valias,'venue_id',txt).map(v=>({
+    html:'<b>'+catEsc(v.nombre)+'</b>'+(v.ciudad?'<span class="catChip">'+catEsc(v.ciudad)+'</span>':''),
+    go:()=>catElegirVenue(v)}));
+  (CAT.locales||[]).filter(x=>x.clase==='venue'&&catNorm(x.nombre).includes(n)).forEach(x=>{
+    items.push({html:'<b>'+catEsc(x.nombre)+'</b><span class="catChip">nuevo, sin subir</span>',go:()=>catUsarVenueNuevo(x)});});
+  if(n&&!catExactoVenue(txt)&&!(CAT.locales||[]).some(x=>x.clase==='venue'&&catNorm(x.nombre)===n))
+    items.push({nuevo:true,html:'+ Crear venue «'+catEsc(txt.trim())+'»',go:()=>catModalVenue(txt.trim())});
+  catMostrar('venueSug',items);
+}
+
+// ── elegir ──
+function catPonerContacto(k){
+  $('contactoId').value=k?k.id:'';
+  $('email').value=k&&k.correo||'';
+  $('tel').value=k&&k.telefono||'';
+}
+function catElegirCliente(c){
+  $('cli').value=c.nombre; $('cliId').value=c.id; $('cliNuevo').value='';
+  catPonerContacto(catContactos(c.id)[0]||null);
+  catPintarInfo();
+}
+function catUsarClienteNuevo(x){
+  $('cli').value=x.nombre; $('cliId').value=''; $('contactoId').value='';
+  $('cliNuevo').value=JSON.stringify(x.datos);
+  $('email').value=x.datos.correo||''; $('tel').value=x.datos.telefono||'';
+  catPintarInfo();
+}
+function catElegirVenue(v){
+  $('venue').value=v.nombre; $('venueId').value=v.id; $('venueNuevo').value='';
+  catPintarInfo();
+}
+function catUsarVenueNuevo(x){
+  $('venue').value=x.nombre; $('venueId').value=''; $('venueNuevo').value=JSON.stringify(x.datos);
+  catPintarInfo();
+}
+
+// Línea de ayuda bajo cada campo + salones del venue.
+function catPintarInfo(){
+  const ci=$('cliInfo'), vi=$('venueInfo'); if(!ci||!vi)return;
+  const cid=$('cliId').value, cn=catJSON($('cliNuevo').value);
+  if(cid&&catClientePorId(cid)){
+    const c=catClientePorId(cid), ks=catContactos(cid);
+    ci.innerHTML='✓ '+(CAT_TIPOS[c.tipo]||c.tipo)+
+      (ks.length>1?' · Contacto <select id="cliContactoSel">'+ks.map(k=>'<option value="'+k.id+'"'+
+        (String(k.id)===$('contactoId').value?' selected':'')+'>'+catEsc(k.nombre||k.correo||k.telefono)+'</option>').join('')+'</select>':'');
+    const sel=$('cliContactoSel');
+    if(sel)sel.onchange=()=>{catPonerContacto(ks.find(k=>String(k.id)===sel.value)||null);};
+    ci.style.color='#2E9AB3';
+  }else if(cn){ci.textContent='🆕 '+(CAT_TIPOS[cn.tipo]||'')+' nueva — se crea al guardar la cotización';ci.style.color='#2E9AB3';}
+  else if($('cli').value.trim()&&CAT.clientes.length){ci.textContent='No está en la lista: elígelo o créalo para que quede en el sistema';ci.style.color='#c98a00';}
+  else ci.textContent='';
+
+  const vid=$('venueId').value, vn=catJSON($('venueNuevo').value);
+  if(vid&&catVenuePorId(vid)){const v=catVenuePorId(vid);vi.textContent='✓ '+(v.ciudad||'Venue registrado');vi.style.color='#2E9AB3';}
+  else if(vn){vi.textContent='🆕 Venue nuevo — se crea al guardar la cotización';vi.style.color='#2E9AB3';}
+  else if($('venue').value.trim()&&CAT.venues.length){vi.textContent='No está en la lista: elígelo o créalo';vi.style.color='#c98a00';}
+  else vi.textContent='';
+
+  const dl=$('salonList');
+  if(dl)dl.innerHTML=(vid?CAT.salones.filter(x=>String(x.venue_id)===String(vid)&&x.activo!==false):[])
+    .map(x=>'<option value="'+catEsc(x.nombre)+'"></option>').join('');
+}
+
+// ── modales de creación ──
+function catModal(titulo,cuerpo,onOk){
+  const d=document.createElement('div');
+  d.className='catModal';
+  d.style.cssText='position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML='<div style="background:#fff;border-radius:10px;padding:18px 16px;max-width:380px;width:100%;max-height:90vh;overflow:auto;'+
+    'box-sizing:border-box;font-family:Arial,sans-serif"><div style="font-size:14px;font-weight:700;color:#2E9AB3;margin-bottom:10px">'+titulo+'</div>'+
+    cuerpo+'<div class="catErr" style="font-size:11px;color:#C0392B;min-height:14px;margin:6px 0"></div>'+
+    '<div style="display:flex;gap:8px"><button type="button" class="catCancel" style="flex:1;padding:9px;border:0.5px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">Cancelar</button>'+
+    '<button type="button" class="catOk" style="flex:1;padding:9px;border:0;border-radius:6px;background:#2E9AB3;color:#fff;font-weight:700;cursor:pointer">Usar</button></div></div>';
+  document.body.appendChild(d);
+  d.querySelector('.catCancel').onclick=()=>d.remove();
+  d.querySelector('.catOk').onclick=()=>{const e=onOk(d);if(e)d.querySelector('.catErr').textContent=e;else d.remove();};
+  return d;
+}
+function catAvisoParecidos(lista,nombre,cuandoUsa){
+  const p=catParecidos(lista,nombre);
+  if(!p.length)return'';
+  return '<div style="background:#fff8e6;border-radius:6px;padding:8px 9px;margin-bottom:10px;font-size:11px;color:#8a6d00">'+
+    '¿Es alguno de estos? '+p.map(x=>'<a href="#" class="catUsarExist" data-id="'+x.id+'" style="color:#2E9AB3;font-weight:700;margin-right:6px">'+catEsc(x.nombre)+'</a>').join('')+'</div>';
+}
+function catModalCliente(nombre){
+  const L='font-size:10.5px;color:#555;display:block;margin:7px 0 3px';
+  const d=catModal('Nuevo cliente',
+    catAvisoParecidos(CAT.clientes,nombre)+
+    '<label style="'+L+'">Nombre *</label><input class="mNom" value="'+catEsc(nombre)+'"/>'+
+    '<label style="'+L+'">Tipo *</label><select class="mTipo"><option value="">— Elige —</option>'+
+      Object.entries(CAT_TIPOS).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>'+
+    '<label style="'+L+'">Descripción *</label><input class="mDesc" placeholder="ej: agencia de bodas en Cartagena"/>'+
+    '<label style="'+L+'">Persona de contacto</label><input class="mCon" placeholder="Opcional"/>'+
+    '<label style="'+L+'">Teléfono</label><input class="mTel" inputmode="tel"/>'+
+    '<label style="'+L+'">Correo</label><input class="mMail" inputmode="email"/>'+
+    '<div style="font-size:9.5px;color:#999;margin-top:5px">* obligatorio, y al menos teléfono o correo.</div>',
+    m=>{
+      const g=c=>m.querySelector(c).value.trim();
+      const datos={nombre:g('.mNom'),tipo:m.querySelector('.mTipo').value,descripcion:g('.mDesc'),
+                   contacto:g('.mCon'),telefono:g('.mTel'),correo:g('.mMail')};
+      if(!datos.nombre)return'Falta el nombre.';
+      if(!datos.tipo)return'Elige el tipo.';
+      if(!datos.descripcion)return'Falta la descripción.';
+      if(!datos.telefono&&!datos.correo)return'Pon al menos un teléfono o un correo.';
+      if(datos.correo&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(datos.correo))return'El correo no parece válido.';
+      const ex=catExactoCliente(datos.nombre);
+      if(ex){catElegirCliente(ex);return null;}
+      CAT.locales=(CAT.locales||[]).filter(x=>!(x.clase==='cliente'&&catNorm(x.nombre)===catNorm(datos.nombre)));
+      CAT.locales.push({clase:'cliente',nombre:datos.nombre,datos}); catGuardarCache();
+      catUsarClienteNuevo({nombre:datos.nombre,datos});
+      return null;
+    });
+  d.querySelectorAll('.catUsarExist').forEach(a=>{a.onclick=ev=>{ev.preventDefault();
+    const c=catClientePorId(a.dataset.id); if(c)catElegirCliente(c); d.remove();};});
+}
+function catModalVenue(nombre){
+  const L='font-size:10.5px;color:#555;display:block;margin:7px 0 3px';
+  const d=catModal('Nuevo venue',
+    catAvisoParecidos(CAT.venues,nombre)+
+    '<label style="'+L+'">Nombre *</label><input class="mNom" value="'+catEsc(nombre)+'"/>'+
+    '<label style="'+L+'">Ciudad</label><select class="mCiu"><option value="Cartagena">Cartagena</option>'+
+      '<option value="Barranquilla">Barranquilla</option><option value="Bogotá">Bogotá</option><option value="">Otra / no sé</option></select>',
+    m=>{
+      const datos={nombre:m.querySelector('.mNom').value.trim(),ciudad:m.querySelector('.mCiu').value};
+      if(!datos.nombre)return'Falta el nombre.';
+      const ex=catExactoVenue(datos.nombre);
+      if(ex){catElegirVenue(ex);return null;}
+      CAT.locales=(CAT.locales||[]).filter(x=>!(x.clase==='venue'&&catNorm(x.nombre)===catNorm(datos.nombre)));
+      CAT.locales.push({clase:'venue',nombre:datos.nombre,datos}); catGuardarCache();
+      catUsarVenueNuevo({nombre:datos.nombre,datos});
+      return null;
+    });
+  d.querySelectorAll('.catUsarExist').forEach(a=>{a.onclick=ev=>{ev.preventDefault();
+    const v=catVenuePorId(a.dataset.id); if(v)catElegirVenue(v); d.remove();};});
+}
+
+// Después de guardar en el servidor: los ids reales reemplazan a "nuevo".
+function catAplicarRespuesta(payload,res){
+  const k=res&&res.catalogo; if(!k||k.error)return;
+  if(payload&&payload.client_uuid===currentClientUuid){
+    if(k.cliente_id){$('cliId').value=k.cliente_id;$('cliNuevo').value='';}
+    if(k.contacto_id)$('contactoId').value=k.contacto_id;
+    if(k.venue_id){$('venueId').value=k.venue_id;$('venueNuevo').value='';}
+  }
+  if(k.cliente_creado||k.venue_creado||k.contacto_id)catCargar();
+}
+
+// ── eventos de los campos ──
+(function(){
+  const cli=$('cli'), ven=$('venue');
+  if(!cli||!ven)return;
+  cli.addEventListener('input',()=>{$('cliId').value='';$('contactoId').value='';$('cliNuevo').value='';$('cliInfo').textContent='';catSugerirCliente();});
+  cli.addEventListener('focus',catSugerirCliente);
+  cli.addEventListener('blur',()=>{setTimeout(()=>{$('cliSug').style.display='none';
+    // Nombre exacto de uno conocido: se liga solo (lo mismo que hace el servidor).
+    if(!$('cliId').value&&!$('cliNuevo').value){const c=catExactoCliente(cli.value);if(c)catElegirCliente(c);}
+    catPintarInfo();},150);});
+  ven.addEventListener('input',()=>{$('venueId').value='';$('venueNuevo').value='';$('venueInfo').textContent='';$('salonList').innerHTML='';catSugerirVenue();});
+  ven.addEventListener('focus',catSugerirVenue);
+  ven.addEventListener('blur',()=>{setTimeout(()=>{$('venueSug').style.display='none';
+    if(!$('venueId').value&&!$('venueNuevo').value){const v=catExactoVenue(ven.value);if(v)catElegirVenue(v);}
+    catPintarInfo();},150);});
+  catPintarInfo();
+})();
 
 // ── AUTOCHEQUEO ──────────────────────────────────────────────────────────
 // Escribe _selfCheck() en la consola del navegador. Verifica lo unico que
@@ -3363,13 +3935,63 @@ if('serviceWorker' in navigator){
   <select id="tkTipo"><option value="soporte">🛠 Soporte (algo no funciona)</option><option value="sugerencia">💡 Sugerencia / mejora</option></select>
   <label style="font-size:12px">Cuéntanos</label>
   <textarea id="tkMsg" placeholder="Describe el problema o la idea. Se adjunta automáticamente la cotización que tienes abierta."></textarea>
+  <label style="font-size:12px">Fotos o capturas (opcional, máximo 3)</label>
+  <input type="file" id="tkFotos" accept="image/*" multiple style="width:100%;font-size:12px;margin:4px 0 4px">
+  <div id="tkFotosVista" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
   <div id="tkEstado" style="font-size:11px;color:#888;min-height:14px;margin-bottom:8px"></div>
   <div class="tkRow"><button type="button" style="background:#eee" onclick="cerrarTicket()">Cancelar</button><button type="button" id="tkEnviar" style="background:#2E9AB3;color:#fff" onclick="enviarTicket()">Enviar</button></div>
 </div></div>
 <script>
 function getTicketQueue(){try{return JSON.parse(localStorage.getItem('novaTicketQueue')||'[]');}catch(e){return[];}}
 function setTicketQueue(q){try{localStorage.setItem('novaTicketQueue',JSON.stringify(q));}catch(e){}}
-function abrirTicket(){document.getElementById('tkEstado').textContent='';document.getElementById('tkModal').style.display='flex';setTimeout(()=>document.getElementById('tkMsg').focus(),50);}
+let _tkFotos=[];
+const TK_MAX_FOTOS=3, TK_MAX_CHARS=700000;
+function abrirTicket(){
+  _tkFotos=[];tkPintarFotos();
+  const inp=document.getElementById('tkFotos');if(inp)inp.value='';
+  document.getElementById('tkEstado').textContent='';document.getElementById('tkModal').style.display='flex';setTimeout(()=>document.getElementById('tkMsg').focus(),50);
+}
+// Reduce la foto a máx. 1280 px y JPEG: un ticket no necesita la foto original
+// del celular (varios MB) y así viaja y se guarda liviano.
+function _tkReducir(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onerror=()=>rej(new Error('No se pudo leer la imagen'));
+    fr.onload=()=>{
+      const im=new Image();
+      im.onerror=()=>rej(new Error('La imagen no es válida'));
+      im.onload=()=>{
+        const k=Math.min(1,1280/Math.max(im.width,im.height));
+        const w=Math.max(1,Math.round(im.width*k)), h=Math.max(1,Math.round(im.height*k));
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+        res({nombre:(file.name||'foto').slice(0,80),tipo:'image/jpeg',data:c.toDataURL('image/jpeg',0.72)});
+      };
+      im.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function tkPintarFotos(){
+  const v=document.getElementById('tkFotosVista');if(!v)return;
+  v.innerHTML=_tkFotos.map((f,i)=>
+    '<span style="position:relative;display:inline-block"><img src="'+f.data+'" style="height:56px;border-radius:5px;border:1px solid #ccc">'+
+    '<a href="#" data-i="'+i+'" class="tkQuitarFoto" style="position:absolute;top:-6px;right:-6px;background:#c0392b;color:#fff;border-radius:50%;width:16px;height:16px;line-height:16px;text-align:center;font-size:11px;text-decoration:none">×</a></span>').join('');
+  v.querySelectorAll('.tkQuitarFoto').forEach(a=>{a.onclick=ev=>{ev.preventDefault();_tkFotos.splice(+a.dataset.i,1);tkPintarFotos();};});
+}
+document.getElementById('tkFotos').addEventListener('change',async ev=>{
+  const est=document.getElementById('tkEstado');est.style.color='#888';
+  for(const f of [...ev.target.files]){
+    if(_tkFotos.length>=TK_MAX_FOTOS){est.style.color='#c98a00';est.textContent='Máximo '+TK_MAX_FOTOS+' fotos.';break;}
+    if(!/^image\//.test(f.type)){est.style.color='#c00';est.textContent='Solo se pueden adjuntar imágenes.';continue;}
+    try{
+      const r=await _tkReducir(f);
+      if(_tkFotos.reduce((n,x)=>n+x.data.length,0)+r.data.length>TK_MAX_CHARS){est.style.color='#c98a00';est.textContent='Las fotos pesan demasiado; quita alguna.';break;}
+      _tkFotos.push(r);
+    }catch(e){est.style.color='#c00';est.textContent=(e&&e.message)||'No se pudo adjuntar la imagen.';}
+  }
+  ev.target.value='';tkPintarFotos();
+});
 function cerrarTicket(){document.getElementById('tkModal').style.display='none';}
 async function _enviarTicketRPC(p){
   const sb=getSb();if(!sb)throw new Error('Sin cliente');
@@ -3384,26 +4006,70 @@ async function enviarTicket(){
   const p={client_uuid:newClientUuid(),tipo:document.getElementById('tkTipo').value,mensaje:msg,
     cotizacion_id:(typeof currentCotizacionId!=='undefined'&&currentCotizacionId)||null,cliente:cli,
     contexto:{ua:navigator.userAgent,url:location.href.split('#')[0],sala:(typeof rooms!=='undefined'&&rooms[activeRoom])?rooms[activeRoom].name:null,ts:new Date().toISOString(),quote_uuid:currentClientUuid||null}};
+  if(_tkFotos.length)p.contexto.adjuntos=_tkFotos.map(f=>({nombre:f.nombre,tipo:f.tipo,data:f.data}));
   try{
     if(!navigator.onLine||!(await refrescarSesion()))throw new Error('offline');
     await _enviarTicketRPC(p);
     est.textContent='✅ Enviado, gracias. La respuesta te llega en la pestaña 💬 Soporte.';est.style.color='#2E9AB3';
-    tkvActualizarBadge();
+    // Si hay señal y sesión para este, también para los que quedaron en cola.
+    flushTicketQueue().finally(tkvActualizarBadge);
   }catch(e){
     const q=getTicketQueue();q.push(p);setTicketQueue(q);
     est.textContent='⚠️ Guardado en este dispositivo; se enviará solo al reconectar/entrar.';est.style.color='#c98a00';
   }
-  document.getElementById('tkMsg').value='';btn.disabled=false;
+  document.getElementById('tkMsg').value='';_tkFotos=[];tkPintarFotos();btn.disabled=false;
   setTimeout(cerrarTicket,1600);
 }
-async function flushTicketQueue(){
-  let q=getTicketQueue();if(!q.length||!navigator.onLine)return;
-  if(!(await refrescarSesion()))return;
-  const rest=[];for(const p of q){try{await _enviarTicketRPC(p);}catch(e){rest.push(p);}}
-  setTicketQueue(rest);
+// Vacía la cola de tickets. Devuelve {enviados, quedan, motivo}.
+// Antes solo corría al cargar la página y con el evento 'online'. En el iPhone
+// la app instalada casi nunca se recarga (se reanuda desde memoria) y 'online'
+// no siempre dispara, así que si al abrir no había sesión y la persona entraba
+// después, la cola se quedaba quieta para siempre. Ahora también corre al
+// entrar, al volver la app al frente, al abrir la pestaña Soporte, después de
+// enviar uno nuevo y con el botón "Enviar ahora". Reenviar es seguro: el
+// client_uuid hace que la base no duplique.
+let _tkFlushing=null;
+function flushTicketQueue(){
+  if(_tkFlushing)return _tkFlushing;
+  _tkFlushing=(async()=>{
+    let q=getTicketQueue();
+    if(!q.length)return{enviados:0,quedan:0};
+    if(!navigator.onLine)return{enviados:0,quedan:q.length,motivo:'sin conexión'};
+    if(!(await refrescarSesion()))return{enviados:0,quedan:q.length,motivo:'sin sesión: entra con tu cuenta'};
+    const rest=[];let enviados=0,ultimo=null;
+    for(const p of q){
+      const{_error,...envio}=p;
+      try{await _enviarTicketRPC(envio);enviados++;}
+      catch(e){ultimo=(e&&e.message)||String(e);rest.push({...envio,_error:ultimo});}
+    }
+    // Lo que se haya encolado mientras tanto no se pierde.
+    const nuevos=getTicketQueue().filter(p=>!q.some(x=>x.client_uuid===p.client_uuid));
+    setTicketQueue(rest.concat(nuevos));
+    return{enviados,quedan:rest.length+nuevos.length,motivo:ultimo};
+  })();
+  return _tkFlushing.finally(()=>{_tkFlushing=null;});
 }
-window.addEventListener('online',flushTicketQueue);
+async function sincronizarColas(){
+  try{await flushPendingQueue();}catch(e){}
+  let r=null;try{r=await flushTicketQueue();}catch(e){}
+  if(r&&r.enviados&&typeof tkvActualizarBadge==='function'){
+    tkvActualizarBadge();
+    if($('t3')&&$('t3').style.display!=='none')cargarTickets();
+  }
+  return r;
+}
+window.addEventListener('online',sincronizarColas);
+window.addEventListener('pageshow',ev=>{if(ev.persisted)sincronizarColas();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sincronizarColas();});
 window.addEventListener('load',()=>setTimeout(()=>{flushTicketQueue().finally(tkvActualizarBadge);},2500));
+async function tkvEnviarAhora(btn){
+  btn.disabled=true;btn.textContent='Enviando...';
+  const r=await flushTicketQueue();
+  if(r&&r.quedan&&r.motivo==='sin sesión: entra con tu cuenta'){mostrarLogin();}
+  await cargarTickets();
+  const m=$('tkvColaMsg');
+  if(m&&r)m.textContent=r.quedan?('No se pudieron enviar '+r.quedan+': '+(r.motivo||'error desconocido')):'';
+}
 
 // ── VISTA DE TICKETS (pestaña 💬 Soporte) ────────────────────────────────
 // Lee y responde por funciones (migración 014); la tabla no se toca directo.
@@ -3421,6 +4087,19 @@ function tkvFecha(iso){
   try{return new Date(iso).toLocaleString('es-CO',{timeZone:'America/Bogota',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});}
   catch(e){return iso.slice(0,16).replace('T',' ');}
 }
+function _tkvSinFotos(filas){
+  return (filas||[]).map(r=>{
+    const c=r&&r.contexto;
+    if(!c||!c.adjuntos)return r;
+    return Object.assign({},r,{contexto:Object.assign({},c,{adjuntos:c.adjuntos.map(a=>({nombre:a&&a.nombre}))})});
+  });
+}
+function tkvVerFoto(src){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:12px;cursor:zoom-out';
+  const im=document.createElement('img');im.src=src;im.style.cssText='max-width:100%;max-height:100%;border-radius:6px';
+  d.appendChild(im);d.onclick=()=>d.remove();document.body.appendChild(d);
+}
 function tkvLeerCache(){try{return JSON.parse(localStorage.getItem(TKV_CACHE)||'null');}catch(e){return null;}}
 
 function tkvPintarBadge(filas,admin){
@@ -3435,8 +4114,14 @@ function tkvPintarBadge(filas,admin){
 async function tkvTraer(){
   const cache=tkvLeerCache();
   if(!identidadCacheada()){_tkv={filas:null,admin:false,desdeCache:false,en:null};return false;}
-  if(!navigator.onLine||!(await refrescarSesion())){
+  if(!navigator.onLine){
     _tkv=cache?{filas:cache.filas,admin:!!cache.admin,desdeCache:true,en:cache.en}:{filas:null,admin:false,desdeCache:true,en:null};
+    return false;
+  }
+  // Hay red pero no hay token usable: la sesión venció o se perdió en este
+  // navegador. Se dice así, en vez de "sin conexión", y se ofrece Entrar.
+  if(!(await refrescarSesion())){
+    _tkv=cache?{filas:cache.filas,admin:!!cache.admin,desdeCache:true,en:cache.en,sinSesion:true}:{filas:null,admin:false,desdeCache:true,en:null,sinSesion:true};
     return false;
   }
   const sb=getSb();
@@ -3445,7 +4130,7 @@ async function tkvTraer(){
   const{data,error}=await sb.rpc('listar_tickets_soporte',{p_solo_mios:false});
   if(error)throw error;
   const en=new Date().toISOString();
-  try{localStorage.setItem(TKV_CACHE,JSON.stringify({filas:data,admin,en}));}catch(e){}
+  try{localStorage.setItem(TKV_CACHE,JSON.stringify({filas:_tkvSinFotos(data),admin,en}));}catch(e){}
   _tkv={filas:data||[],admin,desdeCache:false,en};
   return true;
 }
@@ -3465,6 +4150,8 @@ async function cargarTickets(){
     return;
   }
   res.style.color='#888'; res.textContent='Cargando...';
+  // Primero lo que esté en cola en este dispositivo, para que aparezca en la lista.
+  try{await flushTicketQueue();}catch(e){}
   let deRed=false;
   try{ deRed=await tkvTraer(); }
   catch(e){
@@ -3478,7 +4165,7 @@ async function cargarTickets(){
   if(deRed&&_tkv.filas&&_tkv.filas.some(r=>r.respuesta_nueva)){
     try{await getSb().rpc('marcar_respuestas_vistas');}catch(e){}
     _tkv.filas.forEach(r=>{if(r.respuesta_nueva)r._eraNueva=true;r.respuesta_nueva=false;});
-    try{localStorage.setItem(TKV_CACHE,JSON.stringify({filas:_tkv.filas,admin:_tkv.admin,en:_tkv.en}));}catch(e){}
+    try{localStorage.setItem(TKV_CACHE,JSON.stringify({filas:_tkvSinFotos(_tkv.filas),admin:_tkv.admin,en:_tkv.en}));}catch(e){}
   }
   tkvPintarBadge(_tkv.filas,_tkv.admin);
 }
@@ -3503,20 +4190,33 @@ function tkvRepintar(){
   let html='';
   if(cola.length){
     html+='<div style="border:0.5px dashed #c98a00;border-radius:6px;padding:8px 11px;margin-bottom:8px;background:#fffaf0;font-size:10.5px;color:#8a6200">'+
-      '⏳ '+cola.length+' ticket(s) guardado(s) en este dispositivo, sin enviar todavía. Se envían solos al tener señal y sesión.'+
-      cola.map(p=>'<div style="margin-top:4px;color:#555">· '+tkvEsc((p.mensaje||'').slice(0,120))+'</div>').join('')+
+      '⏳ '+cola.length+' ticket(s) guardado(s) en este dispositivo, sin enviar todavía.'+
+      cola.map(p=>'<div style="margin-top:4px;color:#555">· '+tkvEsc((p.mensaje||'').slice(0,120))+
+        (p._error?'<div style="color:#C0392B;font-size:9.5px">No se pudo enviar: '+tkvEsc(p._error)+'</div>':'')+'</div>').join('')+
+      '<div style="margin-top:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+        '<button type="button" class="save-btn" style="flex:0 0 auto" onclick="tkvEnviarAhora(this)">📤 Enviar ahora</button>'+
+        '<span id="tkvColaMsg" style="color:#C0392B;font-size:10px"></span>'+
+      '</div>'+
     '</div>';
   }
 
   const tot=_tkv.filas||[];
   const abiertos=tot.filter(r=>r.estado==='abierto').length, enProc=tot.filter(r=>r.estado==='en_proceso').length;
   res.style.color=_tkv.desdeCache?'#c98a00':'#888';
+  const _motivo=_tkv.sinSesion?'tu sesión venció':'sin conexión';
   res.textContent=(_tkv.desdeCache
-    ? (_tkv.en?'Lo último que se vio el '+tkvFecha(_tkv.en)+' — sin conexión. ':'Sin conexión y sin nada guardado de antes. ')
+    ? (_tkv.en?'Lo último que se vio el '+tkvFecha(_tkv.en)+' — '+_motivo+'. '
+              :(_tkv.sinSesion?'Tu sesión venció. ':'Sin conexión y sin nada guardado de antes. '))
     : '')+(tot.length?abiertos+' abierto(s) · '+enProc+' en proceso · '+tot.length+' en total':'');
+  if(_tkv.sinSesion){
+    const a=document.createElement('a');a.href='#';a.textContent=' Entrar de nuevo';
+    a.style.cssText='color:#2E9AB3;font-weight:700;text-decoration:none';
+    a.onclick=ev=>{ev.preventDefault();mostrarLogin();};
+    res.appendChild(a);
+  }
 
   if(!f.length){
-    cont.innerHTML=html+'<p style="font-size:11px;color:#888">'+(tot.length?'Nada con este filtro.':'Todavía no hay tickets.')+'</p>';
+    cont.innerHTML=html+'<p style="font-size:11px;color:#888">'+(tot.length?'Nada con este filtro.':(_tkv.sinSesion?'Entra de nuevo para ver tus tickets.':'Todavía no hay tickets.'))+'</p>';
     return;
   }
 
@@ -3561,6 +4261,12 @@ function tkvRepintar(){
       '</div>'+
       '<div style="font-size:10px;color:#888;margin-top:2px">'+tkvFecha(r.created_at)+(meta?' · '+meta:'')+'</div>'+
       '<div style="font-size:11.5px;color:#222;margin-top:6px;white-space:pre-wrap">'+tkvEsc(r.mensaje)+'</div>'+
+      ((ctx.adjuntos||[]).filter(a=>a&&/^data:image\/(jpeg|png|webp);base64,/.test(a.data||'')).length
+        ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+
+            ctx.adjuntos.filter(a=>a&&/^data:image\/(jpeg|png|webp);base64,/.test(a.data||'')).map(a=>
+              '<img class="tkvFoto" src="'+tkvEsc(a.data)+'" alt="'+tkvEsc(a.nombre||'foto')+'" style="height:64px;border-radius:5px;border:0.5px solid #ccc;cursor:zoom-in">').join('')+
+          '</div>'
+        : '')+
       (admin
         ? (r.respondido_en?'<div style="font-size:9.5px;color:#2B6E7F;margin-top:6px">Respondido'+
             (r.respondido_por_nombre?' por '+tkvEsc(r.respondido_por_nombre):'')+' · '+tkvFecha(r.respondido_en)+'</div>':'')
@@ -3569,6 +4275,7 @@ function tkvRepintar(){
     '</div>';
   }).join('');
 
+  cont.querySelectorAll('.tkvFoto').forEach(im=>{im.onclick=()=>tkvVerFoto(im.src);});
   cont.querySelectorAll('.tkvCot').forEach(a=>{a.onclick=ev=>{ev.preventDefault();showTab(1);abrirCotizacion(+a.dataset.id);};});
   cont.querySelectorAll('.tkvGuardar').forEach(b=>{b.onclick=()=>tkvGuardar(+b.dataset.id);});
   cont.querySelectorAll('.tkvResolver').forEach(b=>{b.onclick=()=>tkvGuardar(+b.dataset.id,'resuelto');});
