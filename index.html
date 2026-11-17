@@ -1101,6 +1101,9 @@ function recalcPista(){
   if($('pistaDesc'))$('pistaDesc').textContent=dimStr?desc:'Ingresa las medidas';
   $('prPista').textContent=srvOn.Pista&&v?fmt(v):'—';
 }
+// Nombre del techo o carpa elegido, para la cotización (antes salía solo
+// "Techo / Carpa" y el cliente no sabía cuál).
+function _techoNombre(p){const o=TECHO_OPTS_LIST.find(o=>o.p===parseInt(p));if(!o)return null;return(/transparente|carpa/i.test(o.l)?'Carpa ':'Techo ')+o.l;}
 function recalcTecho(){let ov=parseInt($('techoPrecio').value)||0,base=parseInt($('techoOpt').value)||4000000,v=ov||base;let tot=v;extraTechoItems.forEach(id=>{let el=$(id);if(!el||el.querySelector('.xttecho-opt')?.checked)return;let p=parseInt(el.querySelector('.xttecho-price').value)||0;tot+=p;});$('prTecho').textContent=srvOn.Techo?fmt(tot):'—';}
 function recalcGen(){let ov=parseInt($('genPrecio').value)||0,base=parseInt($('genOpt').value)||1400000,v=ov||base;let tot=v;extraGenItems.forEach(id=>{let el=$(id);if(!el||el.querySelector('.xtgen-opt')?.checked)return;let p=parseInt(el.querySelector('.xtgen-price').value)||0;tot+=p;});$('prGen').textContent=srvOn.Gen?fmt(tot):'—';}
 function recalcEfectos(){
@@ -1726,7 +1729,7 @@ function buildRowsFromData(d,globalNumDias){
   }
   if(SRV.Tarima){let taropc=sOpc('Tarima');let an=parseFloat(v('tarAncho'))||0,lg=parseFloat(v('tarLargo'))||0,_tm=_tarMedida(an,lg,{t244:v('tarT244'),t122:v('tarT122'),t100:v('tarT100')}),m2=_tm.m2||0,pxm2=parseInt(v('tarPxm2'))||80000,val=m2*pxm2;let totTar=val,pctTar=catPct('pctTar');let tarOpcRows=[];(d.extraTar||[]).forEach(it=>{let _tx=_tarMedida(it.an,it.lg,it),p=parseInt(it.pxm2)||0,m2x=_tx.m2;if(m2x&&p){if(taropc||it.opt)tarOpcRows.push({p,m2x});else totTar+=m2x*p;}});if(totTar||tarOpcRows.length){if(totTar&&!taropc)total+=totTar;let dimStr=_tm.desc?_tm.desc+' ('+m2+' m²)':'('+m2+' m²)';let altoT=parseFloat(v('tarAlto'))||0;if(altoT)dimStr+=' · alto '+altoT+'m';rows.push({t:'cat',desc:'Tarima',opcional:taropc||undefined});if(val)rows.push({t:'row',desc:'Tarima cubierta '+dimStr,qty:m2,qtyUnit:'m²',unit:pxm2,sub:val,pct:pctTar,opcional:taropc||undefined});(d.extraTar||[]).forEach(it=>{let _tx=_tarMedida(it.an,it.lg,it),p=parseInt(it.pxm2)||0,m2x=_tx.m2;if(m2x&&p){if(taropc||it.opt)rows.push({t:'row',desc:'(Opcional) Tarima adicional '+_tx.desc+' ('+m2x+' m²)'+(parseFloat(it.alto)?' · alto '+parseFloat(it.alto)+'m':''),qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar,opcional:true});else rows.push({t:'row',desc:'Tarima adicional '+_tx.desc+' ('+m2x+' m²)'+(parseFloat(it.alto)?' · alto '+parseFloat(it.alto)+'m':''),qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar});}});}}
   if(SRV.Pista){let pistaopc=sOpc('Pista');let lg=parseFloat(v('pistaLargo'))||0,an=parseFloat(v('pistaAncho'))||0,m2=lg*an;let tipoRate=parseInt(v('pistaTipo'))||0;let autoPrice=tipoRate&&m2?Math.round(m2*tipoRate):0;let manual=parseInt(v('pistaPrecio'))||0;let val=manual||autoPrice;if(val){if(!pistaopc)total+=val;const TIPO_LABELS={'100000':'Print personalizado','250000':'Espejo','0':'Pista de baile'};let tipoLabel=TIPO_LABELS[String(tipoRate)]||'Pista de baile';let dimStr=lg&&an?lg+'×'+an+' m ('+m2.toFixed(1)+' m²)':'';let d=dimStr?tipoLabel+' '+dimStr:'Pista de baile';rows.push({t:'cat',desc:'Pista de Baile',opcional:pistaopc||undefined});rows.push({t:'row',desc:d,qty:m2||1,qtyUnit:m2?'m²':'',unit:val,sub:val,opcional:pistaopc||undefined});}}
-  if(SRV.Techo){let techoopc=sOpc('Techo');let ov=parseInt(v('techoPrecio'))||0,base=parseInt(v('techoOpt'))||4000000,val=ov||base;let totTecho=val,pctTecho=catPct('pctTecho');(d.extraTecho||[]).forEach(it=>{if(!(techoopc||it.opt))totTecho+=parseInt(it.price)||0;});if(!techoopc)total+=totTecho;rows.push({t:'cat',desc:'Techos y Carpas',opcional:techoopc||undefined});rows.push({t:'row',desc:'Techo / Carpa',qty:1,unit:val,sub:val,pct:pctTecho,opcional:techoopc||undefined});(d.extraTecho||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){if(techoopc||it.opt)rows.push({t:'row',desc:'(Opcional) Techo adicional',qty:1,unit:p,sub:p,pct:pctTecho,opcional:true});else rows.push({t:'row',desc:'Techo adicional',qty:1,unit:p,sub:p,pct:pctTecho});}});}
+  if(SRV.Techo){let techoopc=sOpc('Techo');let ov=parseInt(v('techoPrecio'))||0,base=parseInt(v('techoOpt'))||4000000,val=ov||base;let totTecho=val,pctTecho=catPct('pctTecho');(d.extraTecho||[]).forEach(it=>{if(!(techoopc||it.opt))totTecho+=parseInt(it.price)||0;});if(!techoopc)total+=totTecho;rows.push({t:'cat',desc:'Techos y Carpas',opcional:techoopc||undefined});rows.push({t:'row',desc:_techoNombre(base)||'Techo / Carpa',qty:1,unit:val,sub:val,pct:pctTecho,opcional:techoopc||undefined});(d.extraTecho||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){const nm=_techoNombre(it.sel)||'Techo adicional';if(techoopc||it.opt)rows.push({t:'row',desc:'(Opcional) '+nm,qty:1,unit:p,sub:p,pct:pctTecho,opcional:true});else rows.push({t:'row',desc:nm,qty:1,unit:p,sub:p,pct:pctTecho});}});}
   if(SRV.Gen){let genopc=sOpc('Gen');let ov=parseInt(v('genPrecio'))||0,base=parseInt(v('genOpt'))||1400000,val=ov||base;let totGen=val,pctGen=catPct('pctGen');(d.extraGen||[]).forEach(it=>{if(!(genopc||it.opt))totGen+=parseInt(it.price)||0;});if(!genopc)total+=totGen;rows.push({t:'cat',desc:'Electricidad',opcional:genopc||undefined});rows.push({t:'row',desc:'Planta eléctrica',qty:1,unit:val,sub:val,pct:pctGen,opcional:genopc||undefined});(d.extraGen||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){let lbl=it.sel?EXTRA_GEN_OPTS.find(o=>o.p===parseInt(it.sel))?.l||'Planta adicional':'Planta adicional';if(genopc||it.opt)rows.push({t:'row',desc:'(Opcional) '+lbl,qty:1,unit:p,sub:p,pct:pctGen,opcional:true});else rows.push({t:'row',desc:lbl,qty:1,unit:p,sub:p,pct:pctGen});}});}
   if(SRV.Efectos){let efopc=sOpc('Efectos');const EF_NM={efCryo:'Cryo Jet DMX LED RGB',efSpark:'Sparkular (Volcanes DMX)',efVent:'Ventury — cañón papel metalizado',efLlama:'Lanza Llamas DMX',efHumo:'Cámara de humo 2000w'};const EF_QI={efCryo:'qiCryo',efSpark:'qiSpark',efVent:'qiVent',efLlama:'qiLlama',efHumo:'qiHumo'};const EF_PI={efCryo:'piCryo',efSpark:'piSpark',efVent:'piVent',efLlama:'piLlama',efHumo:'piHumo'};let efIt=[],efTot=0,efOpcRows=[],pctEf=catPct('pctEfectos');Object.keys(EF_NM).forEach(eid=>{if(!on(eid))return;let q=parseInt(v(EF_QI[eid]))||0,p=parseInt(v(EF_PI[eid]))||0;if(q&&p){if(efopc||bOpc(eid))efOpcRows.push({nm:'(Opcional) '+EF_NM[eid],q,sub:q*p});else{efIt.push({nm:EF_NM[eid],q,sub:q*p});efTot+=q*p;}}});
     (d.extraEfectos||[]).forEach(it=>{if(!it.n)return;let q=parseInt(it.q)||1,p=parseInt(it.p)||0,xd=numDiasGlobal>1?1:(parseInt(it.d)||1);let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;if(efopc||it.opt){if(p)efOpcRows.push({nm:'(Opcional) '+nd,q,sub:s,noDay:true,opcional:true});}else if(q&&p){efIt.push({nm:nd,q,sub:s,noDay:true});efTot+=s;}});
@@ -1742,7 +1745,8 @@ function buildRowsFromData(d,globalNumDias){
   // días con pct 100 (un turno completo por día) y respetando los días del
   // salón. No se multiplica aquí: hacer las dos cosas cobraba 3 + 2×3 = 9
   // turnos en un evento de 3 días (estuvo así del 10 al 17 de nov).
-  const persDias=numDiasGlobal>1?numDiasGlobal:1;
+  // Solo para la etiqueta del personal incluido: los días de ESTE salón.
+  const persDias=zoneDays?zoneDays.length:(numDiasGlobal>1?numDiasGlobal:1);
   PERS.forEach(p=>{if(!on('pRol_'+p.id))return;let q=parseInt(v('pQ_'+p.id))||0,r=parseInt(v('pR_'+p.id))||p.r;if(q>0){persRows.push({n:p.n,nIncl:p.n+(persDias>1?' (×'+persDias+' días)':''),q,r,t:q*r});persTotal+=q*r;}});
   if(persRows.length){
     // El personal se cobra por turno: en un evento de varios días cada día es
@@ -2224,6 +2228,9 @@ function gen(){
     let xDays=r.extraDays!=null?r.extraDays:numDias-1;
     let allD=r.sub+extra*xDays;
     let totalLabel=xDays+1===numDias?fmt(allD):fmt(allD)+' (×'+(xDays+1)+'d)';
+    // Ticket #12: lo que se usa un solo día (salón o servicio de 1 día) no
+    // muestra costo de día adicional: no se cobra y confunde al cliente.
+    if(xDays===0)return `<td class="ct">—</td><td class="r">${totalLabel}</td>`;
     return `<td class="r">${fmt(extra)}</td><td class="r">${totalLabel}</td>`;
   };
   rooms.forEach((room,idx)=>{
@@ -2655,6 +2662,8 @@ function _doExcel(){
     let effPct=(row.pct!=null?row.pct:pctDia);
     let xDays=row.extraDays!=null?row.extraDays:numDias-1;
     let extra=Math.round(row.sub*effPct/100),allD=row.sub+extra*xDays;
+    // Ticket #12: un solo día = sin costo de día adicional a la vista.
+    if(xDays===0)return[c('—',{...rowPr(),font:{italic:true,color:{rgb:LIGHT},name:'Arial',sz:9}}),cN(allD,rowPr())];
     return[cN(extra,rowPr()),cN(allD,rowPr())];
   };
   allRows.forEach(row=>{
@@ -2775,6 +2784,7 @@ function exportCSV(){
     let effPct=(r.pct!=null?r.pct:pctDia);
     let xDays=r.extraDays!=null?r.extraDays:numDias-1;
     let extra=Math.round(r.sub*effPct/100),allD=r.sub+extra*xDays;
+    if(xDays===0)return',—,'+allD;   // ticket #12
     return','+extra+','+allD;
   };
   allRows.forEach(r=>{

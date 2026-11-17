@@ -9,7 +9,7 @@
 // index.html + manifest.json + vendor/*. No la edites a mano: si el nombre no
 // cambia en cada publicacion, los dispositivos que ya tienen la app instalada
 // se quedan con la version vieja en cache para siempre.
-const CACHE_NAME = 'nova-cotizador-e3c5c7a4942e';
+const CACHE_NAME = 'nova-cotizador-e0d730744d5a';
 
 const APP_SHELL = [
   './',
