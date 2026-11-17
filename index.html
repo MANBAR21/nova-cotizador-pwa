@@ -227,6 +227,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 
 <!-- ROOM TABS -->
 <div id="roomTabs" class="room-tabs"></div>
+<div id="avisoTotalesEvento" style="display:none;font-size:10.5px;line-height:1.45;color:#7a5200;background:#fff8e6;border:0.5px solid #f0d9a0;border-radius:6px;padding:8px 10px;margin-bottom:8px"></div>
 
 <!-- SAVE / LOAD BAR -->
 <div class="save-bar">
@@ -240,10 +241,10 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 <div id="syncStatus" style="font-size:9.5px;color:#888;margin:-4px 0 8px;text-align:center"></div>
 
 <div class="card" id="zoneNameCard" style="display:none;padding:9px 13px">
-  <label>Nombre de esta zona</label>
-  <input id="zoneName" placeholder="ej: Salón Cóctel, Ceremonia, Salón B" style="margin-bottom:7px"/>
+  <div id="zoneNameField"><label>Nombre de esta zona</label>
+  <input id="zoneName" placeholder="ej: Salón Cóctel, Ceremonia, Salón B" style="margin-bottom:7px"/></div>
   <div id="zoneDaysCont" style="display:none">
-    <div style="font-size:9.5px;color:#777;margin-bottom:5px;font-weight:600">Días activos de esta zona:</div>
+    <div style="font-size:9.5px;color:#777;margin-bottom:5px;font-weight:600">Días de este salón <span style="font-weight:400;color:#999">(lo de este salón se cobra solo los días marcados)</span>:</div>
     <div id="zoneDaysBtns" style="display:flex;gap:4px;flex-wrap:wrap"></div>
   </div>
 </div>
@@ -434,6 +435,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
 
 <!-- IVA / DESCUENTO -->
 <div class="card">
+  <div style="font-size:9.5px;color:#2B6E7F;margin-bottom:7px">IVA, descuento y comisión aplican a <b>todo el evento</b> (todos los salones).</div>
   <div class="ft2">
     <div class="ftc">
       <div style="font-size:11px;font-weight:700;margin-bottom:6px">IVA (19%)</div>
@@ -502,6 +504,16 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
   <div class="g2" style="margin-bottom:9px">
     <div><label>Desde</label><input id="vzDesde" type="date" onchange="vzRepintar()"/></div>
     <div><label>Hasta</label><input id="vzHasta" type="date" onchange="vzRepintar()"/></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end;margin-bottom:9px">
+    <div><label>Ordenar por</label>
+      <select id="vzOrden" onchange="vzGuardarOrden();vzRepintar()">
+        <option value="evento">Fecha del evento</option>
+        <option value="creacion">Fecha de creación</option>
+        <option value="valor">Valor de la cotización</option>
+        <option value="alfa">Cliente (A–Z)</option>
+      </select></div>
+    <button type="button" id="vzDir" class="save-btn" style="width:auto;padding:6px 10px;white-space:nowrap" onclick="vzInvertir()"></button>
   </div>
 
   <div id="vzEstado" style="font-size:10.5px;color:#888;margin-bottom:8px"></div>
@@ -897,8 +909,68 @@ const PERS=[
 
 // ROOM STATE
 const GLOBAL_IDS=['cli','venue','fecha','tipo','otroTipo','tel','email','numDias','pctDiaAdicional','colUnit',
-                  'cliId','contactoId','cliNuevo','venueId','venueNuevo','salon'];
-let rooms=[{name:'Salón Principal',data:null}], activeRoom=0;
+                  'cliId','contactoId','cliNuevo','venueId','venueNuevo','salon',
+                  // Ticket #9: descuento y comisión son del evento, no de un salón.
+                  'descAmt','descMot','comisionPct'];
+// IVA, descuento y comisión del evento (ticket #9). Antes cada salón traía los
+// suyos y el total usaba los del salón que estuviera abierto: el mismo evento
+// daba totales distintos según la pestaña. Ahora son uno solo.
+// Al guardar se copian a todos los salones para que una versión vieja del
+// cotizador que abra el archivo vea lo mismo en cualquier salón.
+function _totalesEvento(){
+  return{ivaOn:!!ivaOn,descOn:!!descOn,descPct:descPct!==false,
+         descAmt:($('descAmt')||{}).value||'',descMot:($('descMot')||{}).value||'',comisionPct:($('comisionPct')||{}).value||''};
+}
+function _sincronizarTotalesEnSalas(){
+  const t=_totalesEvento();
+  rooms.forEach(r=>{if(!r.data)return;r.data.ivaOn=t.ivaOn;r.data.descOn=t.descOn;r.data.descPct=t.descPct;
+    r.data.vals=r.data.vals||{};r.data.vals.descAmt=t.descAmt;r.data.vals.descMot=t.descMot;r.data.vals.comisionPct=t.comisionPct;});
+  return t;
+}
+function _pintarTotalesEvento(){
+  $('ivaNo').className=ivaOn?'':'on';$('ivaSi').className=ivaOn?'on':'';
+  $('descNo').className=descOn?'':'on';$('descSi').className=descOn?'on':'';$('descFields').style.display=descOn?'':'none';
+  $('dmPct').className=descPct?'on':'';$('dmVal').className=descPct?'':'on';
+  try{recalcComision();}catch(e){}
+}
+// Archivos guardados antes del ticket #9: se toma lo del salón que estaba
+// abierto al guardar, que es lo que dio el total guardado. Si los salones no
+// coincidían se avisa, porque desde ahora rige uno solo para todo el evento.
+function _aplicarTotalesDeArchivo(state){
+  const salas=(state.rooms||[]).filter(r=>r&&r.data);
+  let t=state.totales;
+  if(!t){
+    const act=((state.rooms||[])[state.activeRoom||0]||{}).data||(salas[0]||{}).data||{};
+    const v=act.vals||{};
+    t={ivaOn:!!act.ivaOn,descOn:!!act.descOn,descPct:act.descPct!==false,descAmt:v.descAmt||'',descMot:v.descMot||'',comisionPct:v.comisionPct||''};
+  }
+  ivaOn=!!t.ivaOn;descOn=!!t.descOn;descPct=t.descPct!==false;
+  if($('descAmt'))$('descAmt').value=t.descAmt||'';
+  if($('descMot'))$('descMot').value=t.descMot||'';
+  if($('comisionPct'))$('comisionPct').value=t.comisionPct||'';
+  let distintos=[];
+  if(!state.totales&&salas.length>1){
+    const si=b=>b?'sí':'no', pc=x=>(parseFloat(x)||0)+' %';
+    const campos=[['IVA',d=>si(d.ivaOn)],['Descuento',d=>d.descOn?((d.vals||{}).descAmt||'0')+(d.descPct===false?' $':' %'):'no'],
+                  ['Comisión',d=>pc((d.vals||{}).comisionPct)]];
+    campos.forEach(([nom,fn])=>{
+      const vs=salas.map(r=>fn(r.data));
+      if(new Set(vs).size>1)distintos.push(nom+': '+salas.map((r,i)=>r.name+' '+vs[i]).join(', '));
+    });
+  }
+  const av=$('avisoTotalesEvento');
+  if(av){
+    if(distintos.length){
+      av.innerHTML='<b>Revisa esta cotización.</b> Se hizo cuando el IVA, el descuento y la comisión eran por salón, '+
+        'y aquí no coincidían ('+distintos.map(x=>x.replace(/&/g,'&amp;').replace(/</g,'&lt;')).join(' · ')+'). '+
+        'Ahora aplican a todo el evento y quedaron como estaban en el salón que se guardó abierto. '+
+        '<a href="#" onclick="this.parentNode.style.display=\'none\';return false" style="color:#2E9AB3">Entendido</a>';
+      av.style.display='block';
+    }else av.style.display='none';
+  }
+  return distintos;
+}
+let rooms=[{name:'Salón Principal',data:null}], activeRoom=0, _restaurarGlobalesDeSala=false;
 
 // ── HELPERS ──────────────────────────────────────────
 function updSt(stId,qId,pId){let q=parseInt($(qId).value)||0,p=parseInt($(pId).value)||0;$(stId).textContent=fmt(q*p);}
@@ -1083,28 +1155,25 @@ function roomRestore(d){
     if(ledInputMode!=='dim'){ledInputMode='dim';$('ledModeDim').className='on';$('ledModeM2').className='';$('ledDimGroup').style.display='';$('ledM2Group').style.display='none';}
     desgloseState={};document.querySelectorAll('.desg-tog').forEach(inp=>{inp.checked=true;});
     recalc();
-    $('zoneNameCard').style.display=activeRoom>0?'block':'none';
     // Reset day buttons to all-days for a fresh room
     let{numDias,showDias}=getDayInfo();
     let allDays=Array.from({length:numDias},(_,i)=>i+1);
-    if($('zoneDaysCont'))$('zoneDaysCont').style.display=showDias&&activeRoom>0?'':'none';
-    if(showDias&&activeRoom>0)_buildDayBtns('zoneDaysBtns',allDays,numDias);
+    if(showDias)_buildDayBtns('zoneDaysBtns',allDays,numDias);else if($('zoneDaysBtns'))$('zoneDaysBtns').innerHTML='';
+    _pintarTarjetaSalon();
     if(showDias)SRV_DAY_KEYS.forEach(k=>{let row=$('sDR_'+k);if(row)row.style.display='flex';_buildDayBtns('sDays_'+k,allDays,numDias);});
     renderRoomTabs();return;
   }
   selSysId=d.selSysId;Object.assign(secOn,d.secOn);Object.assign(srvOn,d.srvOn);
-  ivaOn=d.ivaOn;descOn=d.descOn;descPct=d.descPct;persApart=d.persApart??false;orquestaOn=d.orquestaOn??false;
+  persApart=d.persApart??false;orquestaOn=d.orquestaOn??false;
   if($('orquestaOn')){$('orquestaOn').className=orquestaOn?'on':'';$('orquestaOff').className=orquestaOn?'':'on';}
   if($('tarAlto'))$('tarAlto').value='';
-  Object.entries(d.vals||{}).forEach(([id,v])=>{if(activeRoom>0&&GLOBAL_IDS.includes(id))return;let el=$(id);if(el)el.value=v;});
+  Object.entries(d.vals||{}).forEach(([id,v])=>{if(GLOBAL_IDS.includes(id)&&!_restaurarGlobalesDeSala)return;let el=$(id);if(el)el.value=v;});
   selSys(d.selSysId);
   (d.snItems||[]).forEach((st,i)=>{let el=$('snI'+i);if(!el)return;if(st.on!==el.classList.contains('on'))togCl(el);let q=$('snQ'+i);if(q)q.value=st.q;});
   document.querySelectorAll('#t1 .ci[id]').forEach(el=>{let want=d.checks[el.id];if(want===undefined)return;if(want!==el.classList.contains('on'))togCl(el);});
   ['sn','lz','esc'].forEach(s=>{let bs={sn:'snBody',lz:'lzBody',esc:'escBody'};let b=$(bs[s]);if(!b)return;b.style.display=secOn[s]?'':'none';$(s+'On').className=secOn[s]?'on':'';$(s+'Off').className=secOn[s]?'':'on';});
   Object.keys(srvOn).forEach(id=>{let el=$('s'+id),ck=$('ck'+id);if(!el||!ck)return;el.className='srv'+(srvOn[id]?' on':'');ck.className='srv-check'+(srvOn[id]?' on':'');ck.textContent=srvOn[id]?'✓':'';});
-  $('ivaNo').className=ivaOn?'':'on';$('ivaSi').className=ivaOn?'on':'';
-  $('descNo').className=descOn?'':'on';$('descSi').className=descOn?'on':'';$('descFields').style.display=descOn?'':'none';
-  $('dmPct').className=descPct?'on':'';$('dmVal').className=descPct?'':'on';
+  _pintarTotalesEvento();
   $('persModeIncl').className=persApart?'':'on';$('persModeApart').className=persApart?'on':'';
   djPersOn=d.djPersOn??false;
   if($('djPersOn')){$('djPersOn').className=djPersOn?'on':'';$('djPersOff').className=djPersOn?'':'on';}
@@ -1116,7 +1185,6 @@ function roomRestore(d){
   $('extraList').innerHTML='';extraItems=[];exId=0;
   (d.extras||[]).forEach(item=>{addExtra();let id=extraItems[extraItems.length-1],el=$(id);if(!el)return;el.querySelector('.exn').value=item.n;el.querySelector('.exq').value=item.q;el.querySelector('.exp').value=item.p;let cf=el.querySelector('.excort');if(cf&&item.cort)cf.checked=true;let of=el.querySelector('.exopt');if(of&&item.opt)of.checked=true;let df=el.querySelector('.exdias');if(df)df.value=item.dias||item.pct||'';let dp=el.querySelector('.exdpct');if(dp)dp.value=item.dpct||'';});
   if($('zoneName'))$('zoneName').value=d.zoneName||'';
-  $('zoneNameCard').style.display=activeRoom>0?'block':'none';
   // Restore new multi-unit fields
   $('snExtraList').innerHTML='';snExtraItems=[];snExId=0;
   (d.snExtras||[]).forEach(it=>{addSnExtra();let id=snExtraItems[snExtraItems.length-1],el=$(id);if(!el)return;el.querySelector('.snex-n').value=it.n||'';let qf=el.querySelector('.snex-q');if(qf)qf.value=it.q||'1';let pf=el.querySelector('.snex-p');if(pf)pf.value=it.p||'';let of=el.querySelector('.snex-opt');if(of&&it.opt)of.checked=true;});
@@ -1146,10 +1214,11 @@ function roomRestore(d){
   // Restore day selectors
   let{numDias,showDias}=getDayInfo();
   let allDays=Array.from({length:numDias},(_,i)=>i+1);
-  if(showDias&&activeRoom>0){
-    $('zoneDaysCont').style.display='';
-    _buildDayBtns('zoneDaysBtns',d.zoneDays||allDays,numDias);
-  } else if($('zoneDaysCont')){$('zoneDaysCont').style.display='none';}
+  // Siempre se rearman: si no, el salón heredaba los días marcados del salón
+  // anterior (los botones seguían ahí aunque la tarjeta estuviera oculta).
+  if(showDias)_buildDayBtns('zoneDaysBtns',(d.zoneDays||allDays).filter(x=>x<=numDias),numDias);
+  else if($('zoneDaysBtns'))$('zoneDaysBtns').innerHTML='';
+  _pintarTarjetaSalon();
   if(showDias){
     SRV_DAY_KEYS.forEach(k=>{
       let row=$('sDR_'+k);if(row)row.style.display='flex';
@@ -1165,13 +1234,22 @@ function roomRestore(d){
   document.querySelectorAll('.desg-tog').forEach(inp=>{let k=inp.dataset.key;inp.checked=desgloseState[k]!==false;});
   recalc();
 }
+// Tarjeta del salón (ticket #10): los días se marcan en CUALQUIER salón,
+// también el principal, siempre que el evento tenga más de un día. El nombre
+// solo se edita aquí en los salones adicionales (el principal, desde su pestaña).
+function _pintarTarjetaSalon(){
+  const{showDias}=getDayInfo(),c=$('zoneNameCard');if(!c)return;
+  c.style.display=(activeRoom>0||showDias)?'block':'none';
+  if($('zoneNameField'))$('zoneNameField').style.display=activeRoom>0?'':'none';
+  if($('zoneDaysCont'))$('zoneDaysCont').style.display=showDias?'':'none';
+}
 function switchRoom(idx){if(idx===activeRoom)return;rooms[activeRoom].data=roomCapture();activeRoom=idx;roomRestore(rooms[idx].data);renderRoomTabs();}
 function addRoom(){
   let name=prompt('Nombre de la nueva zona:','Cóctel');if(!name)return;
   rooms[activeRoom].data=roomCapture();
   rooms.push({name,data:null});activeRoom=rooms.length-1;
   // blank state for new zone - start with only sound on
-  ivaOn=false;descOn=false;descPct=true;persApart=false;djPersOn=false;
+  persApart=false;djPersOn=false;
   if($('djPersOn')){$('djPersOn').className='';$('djPersOff').className='on';}
   if($('djPersBody'))$('djPersBody').style.display='none';
   Object.assign(secOn,{sn:true,lz:false,esc:false});
@@ -1185,19 +1263,18 @@ function addRoom(){
   $('extraDJList').innerHTML='';extraDJItems=[];djItemId=0;
   $('extraVideoList').innerHTML='';extraVideoItems=[];videoItemId=0;
   if(ledInputMode!=='dim'){ledInputMode='dim';$('ledModeDim').className='on';$('ledModeM2').className='';$('ledDimGroup').style.display='';$('ledM2Group').style.display='none';}
-  document.querySelectorAll('#t1 input[type=number][id]').forEach(el=>{if(!['pax','area'].includes(el.id)&&!el.id.startsWith('pi'))el.value='';});
+  document.querySelectorAll('#t1 input[type=number][id]').forEach(el=>{if(!['pax','area'].includes(el.id)&&!el.id.startsWith('pi')&&!GLOBAL_IDS.includes(el.id))el.value='';});
   ['sn','lz','esc'].forEach(s=>{let bs={sn:'snBody',lz:'lzBody',esc:'escBody'};let b=$(bs[s]);if(b)b.style.display=secOn[s]?'':'none';$(s+'On').className=secOn[s]?'on':'';$(s+'Off').className=secOn[s]?'':'on';});
   Object.keys(srvOn).forEach(id=>{let el=$('s'+id),ck=$('ck'+id);if(!el||!ck)return;el.className='srv';ck.className='srv-check';ck.textContent='';});
-  $('ivaNo').className='on';$('ivaSi').className='';$('descNo').className='on';$('descSi').className='';$('descFields').style.display='none';
-  $('zoneName').value=name;$('zoneNameCard').style.display='block';
+  $('zoneName').value=name;
   // Initialize day buttons for new room (all days active by default)
   let{numDias:nd2,showDias:sd2}=getDayInfo();
   if(sd2){
     let allD=Array.from({length:nd2},(_,i)=>i+1);
-    $('zoneDaysCont').style.display='';
     _buildDayBtns('zoneDaysBtns',allD,nd2);
     SRV_DAY_KEYS.forEach(k=>{let row=$('sDR_'+k);if(row)row.style.display='flex';_buildDayBtns('sDays_'+k,allD,nd2);});
   }
+  _pintarTarjetaSalon();
   recalc();renderRoomTabs();
 }
 // Duplica la zona activa (con todo lo cotizado) en una o varias zonas nuevas.
@@ -1236,6 +1313,7 @@ function renderRoomTabs(){
 // ── SAVE / LOAD COTIZACIÓN ────────────────────────────
 function saveQuote(){
   rooms[activeRoom].data=roomCapture();
+  const totales=_sincronizarTotalesEnSalas();
   let global={};
   GLOBAL_IDS.forEach(id=>{let el=$(id);if(el)global[id]=el.value;});
   let state={
@@ -1246,6 +1324,7 @@ function saveQuote(){
     client_uuid:ensureClientUuid(),
     cotizacion_id:currentCotizacionId||null,
     global,
+    totales,
     rooms:rooms.map(r=>({name:r.name,data:r.data})),
     activeRoom
   };
@@ -1515,7 +1594,10 @@ function onLoadFile(e){
       if($('colUnit'))$('colUnit').value='0';
       catLimpiarCampos();
       if(state.global)Object.entries(state.global).forEach(([id,v])=>{let el=$(id);if(el)el.value=v;});
-      roomRestore(rooms[activeRoom].data);
+      _aplicarTotalesDeArchivo(state);
+      // Archivos v1 (sin 'global'): los datos del evento solo vienen en el salón.
+      _restaurarGlobalesDeSala=!state.global;
+      try{roomRestore(rooms[activeRoom].data);}finally{_restaurarGlobalesDeSala=false;}
       renderRoomTabs();
       onNumDiasChange();
       catPintarInfo();
@@ -1551,7 +1633,8 @@ function buildRowsFromData(d,globalNumDias){
   const zoneDays=d.zoneDays?d.zoneDays:null; // null=all
   const srvDays=d.srvDays||{};
   const _extraDays=key=>{
-    let days=srvDays[key]||zoneDays;
+    // Un servicio solo puede usarse los días en que el salón está activo.
+    let sd=srvDays[key],days=sd&&zoneDays?sd.filter(x=>zoneDays.includes(x)):(sd||zoneDays);
     if(!days)return numDiasGlobal-1;
     return Math.max(0,days.length-1);
   };
@@ -1640,8 +1723,12 @@ function buildRowsFromData(d,globalNumDias){
   let addlRows=[],addlTotal=0,cortRows=[];(d.extras||[]).forEach(it=>{if(it.cort){if(it.n)cortRows.push({t:'cortesia',desc:it.n});return;}let q=parseInt(it.q)||0,p=parseInt(it.p)||0,md=numDiasGlobal>1,du=parseInt(it.dias)||0,xd=md?1:(du||1);if(it.n&&q&&p){let s=q*p*xd;let nd=xd>1?it.n+' (×'+xd+' días)':it.n;let ex={};if(md){let zmax=zoneDays?Math.max(0,zoneDays.length-1):numDiasGlobal-1;if(du){let dd=Math.min(du,zmax+1);ex.extraDays=Math.max(0,dd-1);if(dd<numDiasGlobal)nd+=' ('+dd+' día'+(dd>1?'s':'')+')';}let dp=parseFloat(it.dpct);if(it.dpct!==''&&it.dpct!=null&&!isNaN(dp))ex.pct=Math.max(0,Math.min(100,dp));}let rw=Object.assign({t:'catitem',desc:nd,qty:q,unit:p,sub:s,noDay:md?undefined:true},ex);if(it.opt){rw.desc='(Opcional) '+nd;rw.opcional=true;addlRows.push(rw);}else{addlTotal+=s;addlRows.push(rw);}}});
   let persRows=[],persTotal=0;
   // El personal técnico se paga por día: en eventos de varios días el costo se multiplica por los días.
+  // Cada fila lleva el valor de UN día; los demás días los suma el motor de
+  // días con pct 100 (un turno completo por día) y respetando los días del
+  // salón. No se multiplica aquí: hacer las dos cosas cobraba 3 + 2×3 = 9
+  // turnos en un evento de 3 días (estuvo así del 10 al 17 de nov).
   const persDias=numDiasGlobal>1?numDiasGlobal:1;
-  PERS.forEach(p=>{if(!on('pRol_'+p.id))return;let q=parseInt(v('pQ_'+p.id))||0,r=parseInt(v('pR_'+p.id))||p.r;if(q>0){persRows.push({n:p.n+(persDias>1?' (×'+persDias+' días)':''),q,r,t:q*r*persDias});persTotal+=q*r*persDias;}});
+  PERS.forEach(p=>{if(!on('pRol_'+p.id))return;let q=parseInt(v('pQ_'+p.id))||0,r=parseInt(v('pR_'+p.id))||p.r;if(q>0){persRows.push({n:p.n,nIncl:p.n+(persDias>1?' (×'+persDias+' días)':''),q,r,t:q*r});persTotal+=q*r;}});
   if(persRows.length){
     // El personal se cobra por turno: en un evento de varios días cada día es
     // un turno completo (100%), no el "% día adicional" de los equipos. Antes
@@ -1650,7 +1737,7 @@ function buildRowsFromData(d,globalNumDias){
     // con el mismo motor de días que el resto (respeta los días del salón);
     // la fila de categoría sigue con noDay para que no cuenten doble.
     if(piApart){total+=persTotal;rows.push({t:'cat',desc:'Personal técnico',sub:persTotal,noDay:true});persRows.forEach(p=>rows.push(numDiasGlobal>1?{t:'row',desc:p.n,qty:p.q,unit:p.r,sub:p.t,pct:100}:{t:'row',desc:p.n,qty:p.q,unit:p.r,sub:p.t,noDay:true}));}
-    else{rows.push({t:'cat',desc:'Personal técnico asignado'});persRows.forEach(p=>rows.push({t:'subq',desc:p.n,qty:p.q}));}
+    else{rows.push({t:'cat',desc:'Personal técnico asignado'});persRows.forEach(p=>rows.push({t:'subq',desc:p.nIncl,qty:p.q}));}
   }
   if(addlRows.length){addlRows.forEach(r=>rows.push(r));}
   cortRows.forEach(r=>rows.push(r));
@@ -1665,7 +1752,7 @@ function buildRowsFromData(d,globalNumDias){
       if(ed!==numDiasGlobal-1)r.extraDays=ed;
     }
   });
-  let comPct=parseFloat(d.vals?.comisionPct)||0;if(comPct>0){let f=1+comPct/100;rows.forEach(r=>{if(r.sub!==undefined)r.sub=Math.round(r.sub*f);if(r.unit!==undefined)r.unit=Math.round(r.unit*f);});total=Math.round(total*f);addlTotal=Math.round(addlTotal*f);transpTotal=Math.round(transpTotal*f);dayTotal=Math.round(dayTotal*f);}
+  let comPct=parseFloat(($('comisionPct')||{}).value)||0;if(comPct>0){let f=1+comPct/100;rows.forEach(r=>{if(r.sub!==undefined)r.sub=Math.round(r.sub*f);if(r.unit!==undefined)r.unit=Math.round(r.unit*f);});total=Math.round(total*f);addlTotal=Math.round(addlTotal*f);transpTotal=Math.round(transpTotal*f);dayTotal=Math.round(dayTotal*f);}
   let _savedDs=desgloseState;desgloseState=d.desgloseState||{};let _dr=_applyDesglose(rows);desgloseState=_savedDs;
   return{rows:_dr,total,addlTotal,transpTotal,dayTotal};
 }
@@ -1714,10 +1801,9 @@ function _initSrvDayRows(){
 function _showDayRows(show,numDias){
   let allDays=Array.from({length:numDias},(_,i)=>i+1);
   // Zone days (only for non-primary rooms)
-  let showZone=show&&activeRoom>0;
-  if($('zoneDaysCont'))$('zoneDaysCont').style.display=showZone?'':'none';
-  if(showZone&&$('zoneDaysBtns')&&!$('zoneDaysBtns').children.length)
+  if(show&&$('zoneDaysBtns')&&!$('zoneDaysBtns').children.length)
     _buildDayBtns('zoneDaysBtns',allDays,numDias);
+  _pintarTarjetaSalon();
   // Service day rows
   SRV_DAY_KEYS.forEach(k=>{
     let row=$('sDR_'+k);if(!row)return;
@@ -2636,8 +2722,8 @@ function _doExcel(){
 function exportCSV(){
   rooms[activeRoom].data=roomCapture();
   let{numDias,pctDia,showDias}=getDayInfo();
-  let allRows=[],allTotal=0,allAddlTotalCsv=0;
-  rooms.forEach(room=>{if(!room.data)return;let{rows,total,addlTotal}=buildRowsFromData(room.data,numDias);let rZD=room.data.zoneDays,rED=rZD?Math.max(0,rZD.length-1):numDias-1;rows.forEach(r=>{if(r.extraDays===undefined&&r.sub!==undefined&&!r.noDay)r.extraDays=rED;});if(rooms.length>1&&rows.length)allRows.push({t:'roomhdr',desc:room.name});allRows.push(...rows);allTotal+=total;allAddlTotalCsv+=(addlTotal||0);});
+  let allRows=[],allTotal=0,allAddlTotalCsv=0,allTranspCsv=0;
+  rooms.forEach(room=>{if(!room.data)return;let{rows,total,addlTotal,transpTotal}=buildRowsFromData(room.data,numDias);let rZD=room.data.zoneDays,rED=rZD?Math.max(0,rZD.length-1):numDias-1;rows.forEach(r=>{if(r.extraDays===undefined&&r.sub!==undefined&&!r.noDay)r.extraDays=rED;});if(rooms.length>1&&rows.length)allRows.push({t:'roomhdr',desc:room.name});allRows.push(...rows);allTotal+=total;allAddlTotalCsv+=(addlTotal||0);allTranspCsv+=(transpTotal||0);});
   let extraDayCsv=0,extraAddlDayCsv=0;
   if(showDias){
     allRows.forEach(r=>{
@@ -2654,7 +2740,7 @@ function exportCSV(){
   let desc=0;if(descOn){let amt=parseFloat($('descAmt').value)||0;desc=descPct?Math.round(baseConDescCsv*amt/100):Math.round(amt);}
   let sub_=baseConDescCsv-desc;
   let iva=ivaOn?Math.round(sub_*.19):0;
-  let grand=sub_+iva;
+  let grand=sub_+iva+allTranspCsv;
   let fecha=$('fecha').value;
   let fmtD=d=>{if(!d)return'—';let[y,m,dy]=d.split('-');return parseInt(dy)+' de '+['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][parseInt(m)-1]+' de '+y;};
   let hoy=new Date().toISOString().split('T')[0];
@@ -2688,6 +2774,7 @@ function exportCSV(){
   lines.push(',,,'+pad);
   lines.push(',,'+(showDias?'Subtotal día 1':'Subtotal')+','+(allTotal+allAddlTotalCsv)+pad);
   if(showDias)lines.push(',,'+esc(`Días adicionales (${numDias-1} día${numDias>2?'s':''} extra)`)+','+(extraDayCsv+extraAddlDayCsv)+pad);
+  if(allTranspCsv>0)lines.push(',,Transporte,'+allTranspCsv+pad);
   if(desc>0)lines.push(',,'+esc(($('descMot').value||'Descuento')+(descPct?' ('+$('descAmt').value+'%)':''))+','+(-desc)+pad);
   if(ivaOn)lines.push(',,IVA (19%),'+iva+pad);
   lines.push(',,TOTAL,'+grand+pad);
@@ -3090,14 +3177,7 @@ function vzPintar(filas,desdeCache,fechaCache){
     }
   }
 
-  // Sin fecha primero, después por fecha ascendente. Lo que no tiene fecha es
-  // lo que está en negociación temprana: es lo que hay que empujar.
-  f.sort((a,b)=>{
-    if(!a.fecha_evento&&!b.fecha_evento)return 0;
-    if(!a.fecha_evento)return -1;
-    if(!b.fecha_evento)return 1;
-    return a.fecha_evento<b.fecha_evento?-1:1;
-  });
+  vzOrdenar(f);
 
   est.textContent=desdeCache
     ? 'Mostrando lo último que se vio el '+vzFmtFecha((fechaCache||'').slice(0,10))+' — sin conexión'
@@ -3122,6 +3202,7 @@ function vzPintar(filas,desdeCache,fechaCache){
       vzLugarHtml(r)+
       '<div style="font-size:10.5px;color:#666;margin-top:2px">📅 '+
         vzFmtFecha(r.fecha_evento)+(cuando?' · '+cuando:'')+
+        (r.creada_en?' · <span style="color:#999">creada '+vzFmtFecha(r.creada_en)+'</span>':'')+
         (r.puede_cambiar_estado?'':' · '+(VZ_ESTADO[r.estado]||r.estado))+
       '</div>'+
       (r.puede_cambiar_estado?vzSelectorEstado(r):'')+
@@ -3163,6 +3244,62 @@ function vzPintar(filas,desdeCache,fechaCache){
 // escribe no debe pegarle a la red en cada tecla, y asi tambien funciona
 // escribiendo sin señal sobre lo cacheado.
 let _vzUltimas=null, _vzUltimaFecha=null, _vzDesdeCache=false;
+
+// ── Orden de la lista ──
+// Cada criterio tiene su sentido "natural" (el que se usa sin invertir):
+//   evento:   sin fecha primero, luego la más próxima. Lo que no tiene fecha
+//             está en negociación temprana: es lo que hay que empujar.
+//   creacion: la más reciente primero (fecha de la primera versión).
+//   valor:    la más alta primero. Las que no muestran monto van al final.
+//   alfa:     cliente de la A a la Z.
+// "Invertir" da vuelta el sentido; lo que no tiene dato sigue al final
+// (salvo "sin fecha" en evento, que va primero en el sentido natural).
+const VZ_ORDEN_KEY='novaVzOrden';
+let _vzOrd=(()=>{try{return JSON.parse(localStorage.getItem(VZ_ORDEN_KEY)||'null')||{};}catch(e){return{};}})();
+const VZ_DIR_TXT={evento:['↑ Próximos primero','↓ Lejanos primero'],creacion:['↓ Recientes primero','↑ Antiguas primero'],
+  valor:['↓ Mayor valor','↑ Menor valor'],alfa:['A → Z','Z → A']};
+function vzGuardarOrden(){
+  _vzOrd={c:($('vzOrden')||{}).value||'evento',inv:!!_vzOrd.inv&&_vzOrd.c===($('vzOrden')||{}).value};
+  try{localStorage.setItem(VZ_ORDEN_KEY,JSON.stringify(_vzOrd));}catch(e){}
+  vzPintarDir();
+}
+function vzInvertir(){
+  _vzOrd.c=($('vzOrden')||{}).value||'evento';_vzOrd.inv=!_vzOrd.inv;
+  try{localStorage.setItem(VZ_ORDEN_KEY,JSON.stringify(_vzOrd));}catch(e){}
+  vzPintarDir();vzRepintar();
+}
+function vzPintarDir(){
+  const sel=$('vzOrden'),b=$('vzDir');if(!sel||!b)return;
+  if(_vzOrd.c&&sel.value!==_vzOrd.c&&VZ_DIR_TXT[_vzOrd.c])sel.value=_vzOrd.c;
+  b.textContent=VZ_DIR_TXT[sel.value][_vzOrd.inv?1:0];
+}
+function vzOrdenar(f){
+  vzPintarDir();
+  const c=($('vzOrden')||{}).value||'evento', s=_vzOrd.inv?-1:1;
+  // Lo que viene de un caché anterior no trae creada_id: el id sirve igual.
+  const creada=r=>(r.creada_en||'0000')+'|'+String(r.creada_id||r.id).padStart(10,'0');
+  const cmp=(a,b)=>a<b?-1:a>b?1:0;
+  f.sort((a,b)=>{
+    if(c==='evento'){
+      if(!a.fecha_evento&&!b.fecha_evento)return 0;
+      if(!a.fecha_evento)return -s;
+      if(!b.fecha_evento)return s;
+      return s*cmp(a.fecha_evento,b.fecha_evento);
+    }
+    if(c==='creacion')return -s*cmp(creada(a),creada(b));
+    if(c==='valor'){
+      const va=typeof a.total==='number'?a.total:null, vb=typeof b.total==='number'?b.total:null;
+      if(va===null&&vb===null)return 0;
+      if(va===null)return 1;
+      if(vb===null)return -1;
+      return -s*(va-vb);
+    }
+    const na=(a.cliente||'').trim(), nb=(b.cliente||'').trim();
+    if(!na&&!nb)return 0;if(!na)return 1;if(!nb)return -1;
+    return s*na.localeCompare(nb,'es',{sensitivity:'base',numeric:true});
+  });
+  return f;
+}
 function vzRepintar(){ if(_vzUltimas)vzPintar(_vzUltimas,_vzDesdeCache,_vzUltimaFecha); }
 
 async function cargarVisualizador(forzar){
@@ -3415,9 +3552,10 @@ function buildSupabasePayload(){
   try{
     let g={};
     GLOBAL_IDS.forEach(id=>{let el=$(id);if(el)g[id]=el.value;});
+    const totales=_sincronizarTotalesEnSalas();
     estadoApp={version:2,savedAt:new Date().toISOString(),
                client_uuid:ensureClientUuid(),
-               global:g,rooms:rooms.map(r=>({name:r.name,data:r.data})),activeRoom};
+               global:g,totales,rooms:rooms.map(r=>({name:r.name,data:r.data})),activeRoom};
   }catch(e){}
 
   return{
