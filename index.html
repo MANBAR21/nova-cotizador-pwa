@@ -360,7 +360,7 @@ tr.tot td{background:#2E9AB3;color:white;padding:6px 8px;font-size:12px;font-wei
   <div class="sec-label">Otros servicios</div>
   <div class="srv" id="sLED" onclick="togSrv('LED')"><div class="srv-head"><div class="srv-check" id="ckLED"></div><div class="srv-info"><div class="srv-name">🖥️ Pantallas LED</div><div class="srv-desc" id="ledDesc">Ingresa las dimensiones</div></div><div class="srv-price" id="prLED">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-size:10px;color:#555">Ingresar por:</span><div class="t2" onclick="togLedMode();event.stopPropagation()"><span id="ledModeDim" class="on">Dimensiones</span><span id="ledModeM2">m² directo</span></div></div><div id="ledDimGroup" class="g3" style="margin-bottom:7px"><div><label>Ancho (m)</label><input type="number" id="ledAncho" value="5" step="0.5" min="0" oninput="recalcLED()"/></div><div><label>Alto (m)</label><input type="number" id="ledAlto" value="3" step="0.5" min="0" oninput="recalcLED()"/></div><div><label>m² (auto)</label><input id="ledM2disp" readonly style="background:#f5f5f5"/></div></div><div id="ledM2Group" style="display:none;margin-bottom:7px"><div class="g3"><div><label>m² total</label><input type="number" id="ledM2direct" value="15" step="0.5" min="0" oninput="recalcLED()"/></div><div></div><div></div></div></div><div class="g3" style="margin-bottom:7px"><div><label>Tipo de panel</label><select id="ledTipo" onchange="onLedTipo()" onclick="event.stopPropagation()"><option value="350000">Panel LED Interior</option><option value="300000">Panel LED Exterior</option></select></div><div><label>$/m² (editable)</label><input type="number" id="ledPxm2" value="350000" oninput="recalcLED()"/></div><div><label>Precio total</label><input id="ledTotal" readonly style="background:#f5f5f5"/></div></div><div class="price-override" style="margin-bottom:5px"><label>% día adicional (opcional):</label><input type="number" id="pctLED" placeholder="usa % global" min="0" max="100"/></div><div id="extraLedList" style="margin-bottom:5px"></div><button class="add-btn" onclick="addExtraLed();event.stopPropagation()" style="margin-bottom:6px">+ Agregar otra pantalla LED</button><div class="sep" style="margin-top:6px;margin-bottom:6px"></div><div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px">Adicionales (TVs, atriles, proyectores)</div><div id="extraVideoList" style="margin-bottom:4px"></div><button class="add-btn" onclick="addExtraVideo();event.stopPropagation()" style="margin-bottom:6px">+ Agregar TV / atril / proyector</button><div class="sub-eq">Incluido: Procesador Novastar VX1000 Pro · Servidor manejo de contenido · Parales antivibración · Cableado HD-SDI · VJ · Técnico de video</div></div></div>
   <div class="srv" id="sStruct" onclick="togSrv('Struct')"><div class="srv-head"><div class="srv-check" id="ckStruct"></div><div class="srv-info"><div class="srv-name">🏗️ Estructura / Truss</div><div class="srv-desc">Selecciona las piezas de truss</div></div><div class="srv-price" id="prStruct">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div id="structItemList" style="margin-bottom:5px"></div><button class="add-btn" onclick="addStructItem();event.stopPropagation()" style="margin-bottom:7px">+ Agregar pieza de truss / ítem</button><div class="srv-price-edit"><label>Precio total calculado:</label><input id="structTotal" readonly style="background:#f5f5f5"/></div><div class="srv-price-edit"><label>Sobrescribir precio total ($):</label><input type="number" id="structPrecio" placeholder="vacío = suma de ítems" oninput="recalcStruct()"/></div><div class="srv-price-edit"><label>% día adicional (opcional):</label><input type="number" id="pctStruct" placeholder="usa % global" min="0" max="100"/></div></div></div>
-  <div class="srv" id="sTarima" onclick="togSrv('Tarima')"><div class="srv-head"><div class="srv-check" id="ckTarima"></div><div class="srv-info"><div class="srv-name">🎭 Tarima</div><div class="srv-desc" id="tarDesc">$80.000/m² charolina · $60.000/m² pintada</div></div><div class="srv-price" id="prTarima">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div class="g3" style="margin-bottom:7px"><div><label>Ancho (m)</label><input type="number" id="tarAncho" value="6" step="0.5" min="0" oninput="recalcTarima()"/></div><div><label>Largo (m)</label><input type="number" id="tarLargo" value="3" step="0.5" min="0" oninput="recalcTarima()"/></div><div><label>m² (auto)</label><input id="tarM2disp" readonly style="background:#f5f5f5"/></div></div><div class="g3" style="margin-bottom:7px"><div><label>Acabado</label><select id="tarTipo" onchange="recalcTarima()"><option value="80">Charolina ($80k/m²)</option><option value="60">Pintada ($60k/m²)</option></select></div><div><label>$/m²</label><input type="number" id="tarPxm2" value="80000" oninput="recalcTarima()"/></div><div><label>Precio total</label><input id="tarTotal" readonly style="background:#f5f5f5"/></div></div><div class="g3" style="margin-bottom:7px"><div><label>Alto (m) <span style="font-weight:normal;color:#888">(opcional)</span></label><input type="number" id="tarAlto" placeholder="ej. 0.4" step="0.05" min="0" oninput="recalcTarima()"/></div></div><div class="srv-price-edit"><label>% día adicional (opcional):</label><input type="number" id="pctTar" placeholder="usa % global" min="0" max="100"/></div><div id="extraTarList" style="margin-top:6px"></div><button class="add-btn" onclick="addExtraTar();event.stopPropagation()">+ Agregar otra tarima</button></div></div>
+  <div class="srv" id="sTarima" onclick="togSrv('Tarima')"><div class="srv-head"><div class="srv-check" id="ckTarima"></div><div class="srv-info"><div class="srv-name">🎭 Tarima</div><div class="srv-desc" id="tarDesc">$80.000/m² charolina · $60.000/m² pintada</div></div><div class="srv-price" id="prTarima">—</div></div><div class="srv-expand" onclick="event.stopPropagation()"><div class="g3" style="margin-bottom:7px"><div><label>Ancho (m)</label><input type="number" id="tarAncho" value="6" step="0.5" min="0" oninput="recalcTarima()"/></div><div><label>Largo (m)</label><input type="number" id="tarLargo" value="3" step="0.5" min="0" oninput="recalcTarima()"/></div><div><label>m² (auto)</label><input id="tarM2disp" readonly style="background:#f5f5f5"/></div></div><div class="g3" style="margin-bottom:7px"><div><label>Acabado</label><select id="tarTipo" onchange="recalcTarima()"><option value="80">Charolina ($80k/m²)</option><option value="60">Pintada ($60k/m²)</option></select></div><div><label>$/m²</label><input type="number" id="tarPxm2" value="80000" oninput="recalcTarima()"/></div><div><label>Precio total</label><input id="tarTotal" readonly style="background:#f5f5f5"/></div></div><div style="font-size:10px;color:#555;font-weight:700;margin:2px 0 4px">…o por tableros <span style="font-weight:400;color:#888">(cantidad de cada tamaño)</span></div><div class="g3" style="margin-bottom:3px"><div><label>1,22 × 2,44 m</label><input type="number" id="tarT244" min="0" step="1" placeholder="0" oninput="recalcTarima()"/></div><div><label>1,22 × 1,22 m</label><input type="number" id="tarT122" min="0" step="1" placeholder="0" oninput="recalcTarima()"/></div><div><label>1 × 1 m</label><input type="number" id="tarT100" min="0" step="1" placeholder="0" oninput="recalcTarima()"/></div></div><div id="tarPorTab" style="font-size:9.5px;color:#2E9AB3;margin-bottom:7px"></div><div class="g3" style="margin-bottom:7px"><div><label>Alto (m) <span style="font-weight:normal;color:#888">(opcional)</span></label><input type="number" id="tarAlto" placeholder="ej. 0.4" step="0.05" min="0" oninput="recalcTarima()"/></div></div><div class="srv-price-edit"><label>% día adicional (opcional):</label><input type="number" id="pctTar" placeholder="usa % global" min="0" max="100"/></div><div id="extraTarList" style="margin-top:6px"></div><button class="add-btn" onclick="addExtraTar();event.stopPropagation()">+ Agregar otra tarima</button></div></div>
   <div class="srv" id="sPista" onclick="togSrv('Pista')"><div class="srv-head"><div class="srv-check" id="ckPista"></div><div class="srv-info"><div class="srv-name">💃 Pista de baile</div><div class="srv-desc" id="pistaDesc">Ingresa las medidas</div></div><div class="srv-price" id="prPista">—</div></div><div class="srv-expand" onclick="event.stopPropagation()">
     <div class="g3" style="margin-bottom:6px">
       <div><label>Largo (m)</label><input type="number" id="pistaLargo" value="5" min="0" step="0.5" oninput="recalcPista()"/></div>
@@ -1054,15 +1054,29 @@ function recalcLED(){
   if($('ledDesc'))$('ledDesc').textContent=dimStr?(dimStr+' · $'+fmtN(tot)):'Ingresa las dimensiones';
   $('prLED').textContent=srvOn.LED?fmt(tot):'—';
 }
+// Tableros de tarima de Nova (ticket #11). Si se llenan tableros, los m² salen
+// de ahí y no de ancho × largo. Para agregar un tamaño nuevo basta una línea.
+const TAR_TABLEROS=[{k:'t244',l:'1,22 × 2,44',m2:1.22*2.44},{k:'t122',l:'1,22 × 1,22',m2:1.22*1.22},{k:'t100',l:'1 × 1',m2:1}];
+function _tarMedida(an,lg,t){
+  t=t||{};let m2=0,partes=[];
+  TAR_TABLEROS.forEach(x=>{const n=parseInt(t[x.k])||0;if(n>0){m2+=n*x.m2;partes.push(n+' tablero'+(n>1?'s':'')+' '+x.l+' m');}});
+  if(partes.length)return{m2:parseFloat(m2.toFixed(2)),desc:partes.join(' + '),porTableros:true};
+  an=parseFloat(an)||0;lg=parseFloat(lg)||0;
+  return{m2:an&&lg?parseFloat((an*lg).toFixed(2)):0,desc:an&&lg?an+'×'+lg+'m':'',porTableros:false};
+}
+function _tarTablerosDe(el){const t={};TAR_TABLEROS.forEach(x=>{const i=el.querySelector('.xttar-'+x.k);if(i)t[x.k]=i.value;});return t;}
 function recalcTarima(){
   let an=parseFloat($('tarAncho').value)||0,lg=parseFloat($('tarLargo').value)||0;
-  let m2=an&&lg?parseFloat((an*lg).toFixed(2)):0;
+  const _tm=_tarMedida(an,lg,{t244:($('tarT244')||{}).value,t122:($('tarT122')||{}).value,t100:($('tarT100')||{}).value});
+  let m2=_tm.m2;
   if($('tarM2disp'))$('tarM2disp').value=m2?m2+' m²':'—';
+  if($('tarPorTab'))$('tarPorTab').textContent=_tm.porTableros?'Con tableros: '+m2+' m² (se usan en vez de ancho × largo)':'';
+  ['tarAncho','tarLargo'].forEach(id=>{if($(id))$(id).style.opacity=_tm.porTableros?'.45':'';});
   let pxm2=parseInt($('tarPxm2').value)||80000,v=m2*pxm2;
   let tot=v;
-  extraTarItems.forEach(id=>{let el=$(id);if(!el||el.querySelector('.xttar-opt')?.checked)return;let a=parseFloat(el.querySelector('.xttar-an').value)||0,b=parseFloat(el.querySelector('.xttar-lg').value)||0,p=parseInt(el.querySelector('.xttar-pxm2').value)||0;tot+=(a*b)*p;});
+  extraTarItems.forEach(id=>{let el=$(id);if(!el||el.querySelector('.xttar-opt')?.checked)return;let p=parseInt(el.querySelector('.xttar-pxm2').value)||0;tot+=_tarMedida(el.querySelector('.xttar-an').value,el.querySelector('.xttar-lg').value,_tarTablerosDe(el)).m2*p;});
   $('tarTotal').value=fmt(tot);
-  let dimStr=an&&lg?an+'×'+lg+'m ('+m2+' m²)':'';
+  let dimStr=_tm.desc?_tm.desc+' ('+m2+' m²)':'';
   if($('tarDesc'))$('tarDesc').textContent=dimStr?dimStr+' · '+fmt(tot):'$80.000/m² charolina · $60.000/m² pintada';
   $('prTarima').textContent=srvOn.Tarima?fmt(tot):'—';
 }
@@ -1126,7 +1140,7 @@ function roomCapture(){
   d.snExtras=snExtraItems.map(id=>{let el=$(id);if(!el)return null;return{n:el.querySelector('.snex-n').value,q:el.querySelector('.snex-q')?.value||'1',p:el.querySelector('.snex-p')?.value||'',opt:el.querySelector('.snex-opt')?.checked||false};}).filter(Boolean);
   d.extraSnSystems=extraSnSystems.map(id=>{let el=$(id);if(!el)return null;return{label:el.querySelector('.snsy-label').value,sys:el.querySelector('.snsy-sys').value,price:el.querySelector('.snsy-price').value,opt:el.querySelector('.snsy-opt')?.checked||false,items:Array.from(el.querySelectorAll('.snsy-items label')).map(l=>({on:l.querySelector('.snsy-i').checked,q:l.querySelector('.snsy-iq').value}))};}).filter(Boolean);
   d.extraGen=extraGenItems.map(id=>{let el=$(id);if(!el)return null;return{sel:el.querySelector('.xtgen-sel').value,price:el.querySelector('.xtgen-price').value,opt:el.querySelector('.xtgen-opt')?.checked||false};}).filter(Boolean);
-  d.extraTar=extraTarItems.map(id=>{let el=$(id);if(!el)return null;return{an:el.querySelector('.xttar-an').value,lg:el.querySelector('.xttar-lg').value,alto:el.querySelector('.xttar-alto')?.value||'',tipo:el.querySelector('.xttar-tipo').value,pxm2:el.querySelector('.xttar-pxm2').value,opt:el.querySelector('.xttar-opt')?.checked||false};}).filter(Boolean);
+  d.extraTar=extraTarItems.map(id=>{let el=$(id);if(!el)return null;return{an:el.querySelector('.xttar-an').value,lg:el.querySelector('.xttar-lg').value,alto:el.querySelector('.xttar-alto')?.value||'',t244:el.querySelector('.xttar-t244')?.value||'',t122:el.querySelector('.xttar-t122')?.value||'',t100:el.querySelector('.xttar-t100')?.value||'',tipo:el.querySelector('.xttar-tipo').value,pxm2:el.querySelector('.xttar-pxm2').value,opt:el.querySelector('.xttar-opt')?.checked||false};}).filter(Boolean);
   d.extraTecho=extraTechoItems.map(id=>{let el=$(id);if(!el)return null;return{sel:el.querySelector('.xttecho-sel').value,price:el.querySelector('.xttecho-price').value,opt:el.querySelector('.xttecho-opt')?.checked||false};}).filter(Boolean);
   d.extraLed=extraLedItems.map(id=>{let el=$(id);if(!el)return null;return{an:el.querySelector('.xtled-an')?.value||'3',al:el.querySelector('.xtled-al')?.value||'2',tipo:el.querySelector('.xtled-tipo')?.value||'350000',pxm2:el.querySelector('.xtled-pxm2').value,opt:el.querySelector('.xtled-opt')?.checked||false};}).filter(Boolean);
   d.structItems=structItems.map(id=>{let el=$(id);if(!el)return null;return{name:el.querySelector('.stri-name').value,qty:el.querySelector('.stri-qty').value,price:el.querySelector('.stri-price').value,opt:el.querySelector('.stri-opt')?.checked||false};}).filter(Boolean);
@@ -1197,7 +1211,7 @@ function roomRestore(d){
     // backward compat: old saves had m2 only
     if(it.an){el.querySelector('.xttar-an').value=it.an;el.querySelector('.xttar-lg').value=it.lg||'3';}
     else{let side=Math.sqrt(parseInt(it.m2)||12);el.querySelector('.xttar-an').value=side.toFixed(1);el.querySelector('.xttar-lg').value=side.toFixed(1);}
-    el.querySelector('.xttar-tipo').value=it.tipo||'80000';if(el.querySelector('.xttar-alto'))el.querySelector('.xttar-alto').value=it.alto||'';el.querySelector('.xttar-pxm2').value=it.pxm2||'80000';let of=el.querySelector('.xttar-opt');if(of&&it.opt)of.checked=true;});
+    el.querySelector('.xttar-tipo').value=it.tipo||'80000';if(el.querySelector('.xttar-alto'))el.querySelector('.xttar-alto').value=it.alto||'';TAR_TABLEROS.forEach(x=>{const i=el.querySelector('.xttar-'+x.k);if(i)i.value=it[x.k]||'';});el.querySelector('.xttar-pxm2').value=it.pxm2||'80000';let of=el.querySelector('.xttar-opt');if(of&&it.opt)of.checked=true;});
   $('extraTechoList').innerHTML='';extraTechoItems=[];techoItemId=0;
   (d.extraTecho||[]).forEach(it=>{addExtraTecho();let id=extraTechoItems[extraTechoItems.length-1],el=$(id);if(!el)return;if(it.sel)el.querySelector('.xttecho-sel').value=it.sel;el.querySelector('.xttecho-price').value=it.price||'';let of=el.querySelector('.xttecho-opt');if(of&&it.opt)of.checked=true;});
   $('extraLedList').innerHTML='';extraLedItems=[];ledItemId=0;
@@ -1348,6 +1362,7 @@ function saveQuote(){
   let url=URL.createObjectURL(blob);
   let a=document.createElement('a');a.href=url;a.download=getFilename()+'.json';a.click();
   URL.revokeObjectURL(url);
+  try{_marcarBorradorGuardado();}catch(e){}
 }
 // Abre el selector de archivos. Sigue existiendo porque es lo que nunca falla
 // y es como se manda una cotizacion por WhatsApp.
@@ -1709,7 +1724,7 @@ function buildRowsFromData(d,globalNumDias){
     let ov=parseInt(v('structPrecio'))||0,val=ov||totStruct;
     if(val||structOpcRows.length){if(ov){if(val&&!stropc)total+=val;rows.push({t:'cat',desc:'Estructura',sub:val||undefined,pct:catPct('pctStruct'),opcional:stropc||undefined});structRowsData.forEach(r=>rows.push({t:'subq',desc:r.name,qty:r.qty}));}else{if(totStruct&&!stropc)total+=totStruct;let psT=catPct('pctStruct');rows.push({t:'cat',desc:'Estructura',opcional:stropc||undefined});structRowsData.forEach(r=>rows.push({t:'row',desc:r.name,qty:r.qty,unit:r.unit,sub:r.sub,pct:psT}));}structOpcRows.forEach(r=>rows.push({t:'row',desc:r.name,qty:r.qty,unit:r.unit,sub:r.sub,opcional:true}));}
   }
-  if(SRV.Tarima){let taropc=sOpc('Tarima');let an=parseFloat(v('tarAncho'))||0,lg=parseFloat(v('tarLargo'))||0,m2=parseFloat((an*lg).toFixed(2))||0,pxm2=parseInt(v('tarPxm2'))||80000,val=m2*pxm2;let totTar=val,pctTar=catPct('pctTar');let tarOpcRows=[];(d.extraTar||[]).forEach(it=>{let a=parseFloat(it.an)||0,b=parseFloat(it.lg)||0,p=parseInt(it.pxm2)||0,m2x=parseFloat((a*b).toFixed(2));if(a&&b&&p){if(taropc||it.opt)tarOpcRows.push({a,b,p,m2x});else totTar+=m2x*p;}});if(totTar||tarOpcRows.length){if(totTar&&!taropc)total+=totTar;let dimStr=an&&lg?an+'×'+lg+'m ('+m2+' m²)':'('+m2+' m²)';let altoT=parseFloat(v('tarAlto'))||0;if(altoT)dimStr+=' · alto '+altoT+'m';rows.push({t:'cat',desc:'Tarima',opcional:taropc||undefined});if(val)rows.push({t:'row',desc:'Tarima cubierta '+dimStr,qty:m2,qtyUnit:'m²',unit:pxm2,sub:val,pct:pctTar,opcional:taropc||undefined});(d.extraTar||[]).forEach(it=>{let a=parseFloat(it.an)||0,b=parseFloat(it.lg)||0,p=parseInt(it.pxm2)||0,m2x=parseFloat((a*b).toFixed(2));if(a&&b&&p){if(taropc||it.opt)rows.push({t:'row',desc:'(Opcional) Tarima adicional '+a+'×'+b+'m ('+m2x+' m²)'+(parseFloat(it.alto)?' · alto '+parseFloat(it.alto)+'m':''),qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar,opcional:true});else rows.push({t:'row',desc:'Tarima adicional '+a+'×'+b+'m ('+m2x+' m²)'+(parseFloat(it.alto)?' · alto '+parseFloat(it.alto)+'m':''),qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar});}});}}
+  if(SRV.Tarima){let taropc=sOpc('Tarima');let an=parseFloat(v('tarAncho'))||0,lg=parseFloat(v('tarLargo'))||0,_tm=_tarMedida(an,lg,{t244:v('tarT244'),t122:v('tarT122'),t100:v('tarT100')}),m2=_tm.m2||0,pxm2=parseInt(v('tarPxm2'))||80000,val=m2*pxm2;let totTar=val,pctTar=catPct('pctTar');let tarOpcRows=[];(d.extraTar||[]).forEach(it=>{let _tx=_tarMedida(it.an,it.lg,it),p=parseInt(it.pxm2)||0,m2x=_tx.m2;if(m2x&&p){if(taropc||it.opt)tarOpcRows.push({p,m2x});else totTar+=m2x*p;}});if(totTar||tarOpcRows.length){if(totTar&&!taropc)total+=totTar;let dimStr=_tm.desc?_tm.desc+' ('+m2+' m²)':'('+m2+' m²)';let altoT=parseFloat(v('tarAlto'))||0;if(altoT)dimStr+=' · alto '+altoT+'m';rows.push({t:'cat',desc:'Tarima',opcional:taropc||undefined});if(val)rows.push({t:'row',desc:'Tarima cubierta '+dimStr,qty:m2,qtyUnit:'m²',unit:pxm2,sub:val,pct:pctTar,opcional:taropc||undefined});(d.extraTar||[]).forEach(it=>{let _tx=_tarMedida(it.an,it.lg,it),p=parseInt(it.pxm2)||0,m2x=_tx.m2;if(m2x&&p){if(taropc||it.opt)rows.push({t:'row',desc:'(Opcional) Tarima adicional '+_tx.desc+' ('+m2x+' m²)'+(parseFloat(it.alto)?' · alto '+parseFloat(it.alto)+'m':''),qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar,opcional:true});else rows.push({t:'row',desc:'Tarima adicional '+_tx.desc+' ('+m2x+' m²)'+(parseFloat(it.alto)?' · alto '+parseFloat(it.alto)+'m':''),qty:m2x,qtyUnit:'m²',unit:p,sub:m2x*p,pct:pctTar});}});}}
   if(SRV.Pista){let pistaopc=sOpc('Pista');let lg=parseFloat(v('pistaLargo'))||0,an=parseFloat(v('pistaAncho'))||0,m2=lg*an;let tipoRate=parseInt(v('pistaTipo'))||0;let autoPrice=tipoRate&&m2?Math.round(m2*tipoRate):0;let manual=parseInt(v('pistaPrecio'))||0;let val=manual||autoPrice;if(val){if(!pistaopc)total+=val;const TIPO_LABELS={'100000':'Print personalizado','250000':'Espejo','0':'Pista de baile'};let tipoLabel=TIPO_LABELS[String(tipoRate)]||'Pista de baile';let dimStr=lg&&an?lg+'×'+an+' m ('+m2.toFixed(1)+' m²)':'';let d=dimStr?tipoLabel+' '+dimStr:'Pista de baile';rows.push({t:'cat',desc:'Pista de Baile',opcional:pistaopc||undefined});rows.push({t:'row',desc:d,qty:m2||1,qtyUnit:m2?'m²':'',unit:val,sub:val,opcional:pistaopc||undefined});}}
   if(SRV.Techo){let techoopc=sOpc('Techo');let ov=parseInt(v('techoPrecio'))||0,base=parseInt(v('techoOpt'))||4000000,val=ov||base;let totTecho=val,pctTecho=catPct('pctTecho');(d.extraTecho||[]).forEach(it=>{if(!(techoopc||it.opt))totTecho+=parseInt(it.price)||0;});if(!techoopc)total+=totTecho;rows.push({t:'cat',desc:'Techos y Carpas',opcional:techoopc||undefined});rows.push({t:'row',desc:'Techo / Carpa',qty:1,unit:val,sub:val,pct:pctTecho,opcional:techoopc||undefined});(d.extraTecho||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){if(techoopc||it.opt)rows.push({t:'row',desc:'(Opcional) Techo adicional',qty:1,unit:p,sub:p,pct:pctTecho,opcional:true});else rows.push({t:'row',desc:'Techo adicional',qty:1,unit:p,sub:p,pct:pctTecho});}});}
   if(SRV.Gen){let genopc=sOpc('Gen');let ov=parseInt(v('genPrecio'))||0,base=parseInt(v('genOpt'))||1400000,val=ov||base;let totGen=val,pctGen=catPct('pctGen');(d.extraGen||[]).forEach(it=>{if(!(genopc||it.opt))totGen+=parseInt(it.price)||0;});if(!genopc)total+=totGen;rows.push({t:'cat',desc:'Electricidad',opcional:genopc||undefined});rows.push({t:'row',desc:'Planta eléctrica',qty:1,unit:val,sub:val,pct:pctGen,opcional:genopc||undefined});(d.extraGen||[]).forEach(it=>{let p=parseInt(it.price)||0;if(p){let lbl=it.sel?EXTRA_GEN_OPTS.find(o=>o.p===parseInt(it.sel))?.l||'Planta adicional':'Planta adicional';if(genopc||it.opt)rows.push({t:'row',desc:'(Opcional) '+lbl,qty:1,unit:p,sub:p,pct:pctGen,opcional:true});else rows.push({t:'row',desc:lbl,qty:1,unit:p,sub:p,pct:pctGen});}});}
@@ -1919,7 +1934,7 @@ function addExtraGen(){let id='xtGen'+(genItemId++);extraGenItems.push(id);let o
 function onXtGenSel(sel){let p=parseInt(sel.value)||0;if(p)sel.closest('div[id]').querySelector('.xtgen-price').value=p;recalcGen();}
 function removeExtraGen(id){let el=$(id);if(el)el.remove();extraGenItems=extraGenItems.filter(x=>x!==id);recalcGen();}
 
-function addExtraTar(){let id='xtTar'+(tarItemId++);extraTarItems.push(id);let div=document.createElement('div');div.id=id;div.style.cssText='border:0.5px solid #dde;border-radius:5px;padding:7px 9px;margin-bottom:5px;background:#fafafa';div.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:5px;align-items:end;margin-bottom:5px"><div><label style="font-size:9.5px;color:#555">Ancho (m)</label><input type="number" class="xttar-an" value="4" step="0.5" min="0" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Largo (m)</label><input type="number" class="xttar-lg" value="3" step="0.5" min="0" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Alto (m)</label><input type="number" class="xttar-alto" placeholder="opc." step="0.05" min="0" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Acabado</label><select class="xttar-tipo" onchange="onXtTarSel(this)" style="width:100%;font-size:10px;padding:4px;border:0.5px solid #ccc;border-radius:4px"><option value="80000">Charolina</option><option value="60000">Pintada</option></select></div><div><label style="font-size:9.5px;color:#555">$/m²</label><input type="number" class="xttar-pxm2" value="80000" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><button class="del-btn" onclick="removeExtraTar('${id}')" style="align-self:end">✕</button></div><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#E07020;cursor:pointer"><input type="checkbox" class="xttar-opt" style="width:auto;margin:0"/> Opcional</label>`;$('extraTarList').appendChild(div);recalcTarima();}
+function addExtraTar(){let id='xtTar'+(tarItemId++);extraTarItems.push(id);let div=document.createElement('div');div.id=id;div.style.cssText='border:0.5px solid #dde;border-radius:5px;padding:7px 9px;margin-bottom:5px;background:#fafafa';div.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:5px;align-items:end;margin-bottom:5px"><div><label style="font-size:9.5px;color:#555">Ancho (m)</label><input type="number" class="xttar-an" value="4" step="0.5" min="0" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Largo (m)</label><input type="number" class="xttar-lg" value="3" step="0.5" min="0" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Alto (m)</label><input type="number" class="xttar-alto" placeholder="opc." step="0.05" min="0" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><div><label style="font-size:9.5px;color:#555">Acabado</label><select class="xttar-tipo" onchange="onXtTarSel(this)" style="width:100%;font-size:10px;padding:4px;border:0.5px solid #ccc;border-radius:4px"><option value="80000">Charolina</option><option value="60000">Pintada</option></select></div><div><label style="font-size:9.5px;color:#555">$/m²</label><input type="number" class="xttar-pxm2" value="80000" oninput="recalcTarima()" style="width:100%;font-size:10.5px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/></div><button class="del-btn" onclick="removeExtraTar('${id}')" style="align-self:end">✕</button></div><div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:5px;align-items:center;margin-bottom:5px"><span style="font-size:9.5px;color:#555">o tableros:</span>${TAR_TABLEROS.map(x=>`<input type="number" class="xttar-${x.k}" min="0" step="1" placeholder="${x.l}" title="Tableros de ${x.l} m" oninput="recalcTarima()" style="width:100%;font-size:10px;padding:4px 6px;border:0.5px solid #ccc;border-radius:4px"/>`).join('')}</div><label style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#E07020;cursor:pointer"><input type="checkbox" class="xttar-opt" style="width:auto;margin:0"/> Opcional</label>`;$('extraTarList').appendChild(div);recalcTarima();}
 function onXtTarSel(sel){sel.closest('div[id]').querySelector('.xttar-pxm2').value=parseInt(sel.value)||80000;recalcTarima();}
 function removeExtraTar(id){let el=$(id);if(el)el.remove();extraTarItems=extraTarItems.filter(x=>x!==id);recalcTarima();}
 
@@ -3627,6 +3642,7 @@ async function guardarEnSistema(){
     if(res&&res.cotizacion_id&&payload.client_uuid===currentClientUuid)currentCotizacionId=res.cotizacion_id;
     catAplicarRespuesta(payload,res);
     setSyncStatus('☁️ Guardado en el sistema — '+new Date().toLocaleTimeString(),'#2E9AB3');
+    try{_marcarBorradorGuardado();}catch(e){}
     await flushPendingQueue();
   }catch(err){
     let q=getPendingQueue();
@@ -4010,6 +4026,78 @@ window._selfCheck=function(){
   return true;
 };
 
+// ── BORRADOR AUTOMÁTICO ──────────────────────────────────────────────────
+// Lo que está en pantalla se guarda en este dispositivo mientras se trabaja.
+// Si la página se recarga (actualización, se cerró, se fue la batería), al
+// volver se ofrece recuperarlo. Nada sale del dispositivo: es solo un respaldo
+// hasta que se guarde en el sistema o en archivo.
+const NOVA_BORRADOR='novaBorrador', NOVA_BORRADOR_AUTO='novaRestaurarBorrador';
+let _borradorBase=null,_borradorTimer=null,_borradorListo=false;
+function _estadoEnPantalla(){
+  rooms[activeRoom].data=roomCapture();
+  const totales=_sincronizarTotalesEnSalas();
+  let g={};GLOBAL_IDS.forEach(id=>{let el=$(id);if(el)g[id]=el.value;});
+  return{version:2,client_uuid:currentClientUuid||null,cotizacion_id:currentCotizacionId||null,
+         global:g,totales,rooms:rooms.map(r=>({name:r.name,data:r.data})),activeRoom};
+}
+function _huellaEstado(e){const c=Object.assign({},e);delete c.activeRoom;return JSON.stringify(c);}
+function _guardarBorrador(paraRestaurar){
+  if(!_borradorListo)return;
+  const e=_estadoEnPantalla(),h=_huellaEstado(e);
+  if(h===_borradorBase&&!paraRestaurar)return; // formulario sin tocar
+  let prev=null;try{prev=JSON.parse(localStorage.getItem(NOVA_BORRADOR)||'null');}catch(x){}
+  const guardado=!!(prev&&prev.huella===h&&prev.guardado);
+  try{
+    localStorage.setItem(NOVA_BORRADOR,JSON.stringify({en:new Date().toISOString(),huella:h,guardado,estado:e}));
+    if(paraRestaurar)localStorage.setItem(NOVA_BORRADOR_AUTO,'1');
+  }catch(x){}
+}
+function _guardarBorradorLuego(){clearTimeout(_borradorTimer);_borradorTimer=setTimeout(()=>{try{_guardarBorrador();}catch(e){}},1200);}
+function _marcarBorradorGuardado(){
+  if(!_borradorListo)return;
+  const e=_estadoEnPantalla();
+  try{localStorage.setItem(NOVA_BORRADOR,JSON.stringify({en:new Date().toISOString(),huella:_huellaEstado(e),guardado:true,estado:e}));}catch(x){}
+}
+function _restaurarBorrador(b){
+  const file=new File([JSON.stringify(b.estado)],'borrador.json',{type:'application/json'});
+  onLoadFile({target:{files:[file]}});
+  setTimeout(()=>{if(b.estado.cotizacion_id)currentCotizacionId=b.estado.cotizacion_id;},300);
+  const bar=$('novaBorradorBar');if(bar)bar.remove();
+  setSyncStatus('Se recuperó lo que tenías en pantalla ('+new Date(b.en).toLocaleTimeString()+'). Guárdalo en el sistema.','#c98a00');
+}
+function _ofrecerBorrador(b){
+  const salas=(b.estado.rooms||[]).length, cli=((b.estado.global||{}).cli||'').trim()||'sin cliente';
+  const d=new Date(b.en), hoy=new Date().toDateString()===d.toDateString();
+  const bar=document.createElement('div');bar.id='novaBorradorBar';
+  bar.style.cssText='font-size:11.5px;line-height:1.45;color:#7a5200;background:#fff8e6;border:0.5px solid #f0d9a0;'+
+    'border-radius:6px;padding:9px 11px;margin-bottom:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  bar.innerHTML='<span style="flex:1;min-width:200px"><b>Tienes una cotización sin guardar</b> de '+(hoy?'hoy':d.toLocaleDateString())+' a las '+
+    d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+': '+esc(cli)+(salas>1?' · '+salas+' salones':'')+'.</span>'+
+    '<button type="button" style="background:#2E9AB3;color:#fff;border:0;border-radius:5px;padding:6px 12px;font-weight:700;cursor:pointer">Recuperar</button>'+
+    '<button type="button" style="background:#eee;color:#555;border:0;border-radius:5px;padding:6px 10px;cursor:pointer">Descartar</button>';
+  const[bR,bD]=bar.querySelectorAll('button');
+  bR.onclick=()=>_restaurarBorrador(b);
+  bD.onclick=()=>{if(!confirm('¿Descartar esa cotización sin guardar? No se puede recuperar después.'))return;
+    try{localStorage.removeItem(NOVA_BORRADOR);}catch(e){}bar.remove();};
+  const t1=$('t1');if(t1)t1.insertBefore(bar,t1.firstChild);
+}
+function _iniciarBorrador(){
+  _borradorBase=_huellaEstado(_estadoEnPantalla());
+  let b=null;try{b=JSON.parse(localStorage.getItem(NOVA_BORRADOR)||'null');}catch(e){}
+  const auto=localStorage.getItem(NOVA_BORRADOR_AUTO)==='1';
+  try{localStorage.removeItem(NOVA_BORRADOR_AUTO);}catch(e){}
+  _borradorListo=true;
+  if(!b||!b.estado||b.huella===_borradorBase)return;
+  if(auto)_restaurarBorrador(b);          // recarga por actualización: se repone solo
+  else if(!b.guardado)_ofrecerBorrador(b); // si ya estaba guardado, no hay nada que ofrecer
+}
+['input','change','click'].forEach(ev=>document.addEventListener(ev,e=>{
+  if(e.target&&e.target.closest&&e.target.closest('#t1'))_guardarBorradorLuego();},true));
+window.addEventListener('pagehide',()=>{try{_guardarBorrador();}catch(e){}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){try{_guardarBorrador();}catch(e){}}});
+window.addEventListener('load',()=>setTimeout(()=>{try{_iniciarBorrador();}catch(e){console.error('borrador',e);}},1500));
+
 // ── PWA: registro del service worker (offline + instalable) ───────────────
 // ── SERVICE WORKER + AVISO DE VERSION NUEVA ──────────────────────────────
 // El worker nuevo ya no se activa solo (se le quito skipWaiting): si lo
@@ -4020,14 +4108,16 @@ function mostrarAvisoVersion(worker){
   if(document.getElementById('novaUpdateBar'))return;
   let bar=document.createElement('div');
   bar.id='novaUpdateBar';
-  bar.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;'+
+  // Arriba: abajo tapaba el botón "Generar cotización" y un toque ahí
+  // recargaba la página (17 nov: se perdió una cotización así).
+  bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;'+
     'background:#2E9AB3;color:#fff;font-size:13px;box-sizing:border-box;'+
     // El padding de abajo respeta el indicador de inicio del iPhone, que si no
     // tapa los botones justo donde estan.
-    'padding:11px 14px calc(11px + env(safe-area-inset-bottom,0px));'+
+    'padding:calc(11px + env(safe-area-inset-top,0px)) 14px 11px;'+
     'display:flex;gap:12px;align-items:center;justify-content:center;'+
-    'flex-wrap:wrap;box-shadow:0 -2px 10px rgba(0,0,0,.18)';
-  bar.innerHTML='<span>Hay una versión nueva del cotizador.</span>'+
+    'flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.18)';
+  bar.innerHTML='<span>Hay una versión nueva del cotizador. Lo que tengas en pantalla se conserva.</span>'+
     '<button type="button" style="background:#fff;color:#2E9AB3;border:0;'+
     'border-radius:5px;padding:6px 13px;font-weight:600;cursor:pointer">Actualizar</button>'+
     '<button type="button" style="background:transparent;color:#fff;border:0;'+
@@ -4035,6 +4125,7 @@ function mostrarAvisoVersion(worker){
   let[btnUpd,btnCerrar]=bar.querySelectorAll('button');
   btnUpd.onclick=()=>{
     btnUpd.disabled=true;btnUpd.textContent='Actualizando...';
+    try{_guardarBorrador(true);}catch(e){}
     // Al activarse el worker nuevo, 'controllerchange' recarga la pagina.
     worker.postMessage({type:'SKIP_WAITING'});
   };
@@ -4063,7 +4154,11 @@ if('serviceWorker' in navigator){
 
   let recargando=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    if(recargando)return;recargando=true;location.reload();
+    if(recargando)return;recargando=true;
+    // También cuando la actualización la hizo OTRA pestaña: esta se recarga
+    // sola, así que se guarda lo que tenga y se repone al volver.
+    try{_guardarBorrador(true);}catch(e){}
+    location.reload();
   });
 }
 </script>
